@@ -1,0 +1,358 @@
+\documentclass[11pt, letterpaper]{article}
+
+\usepackage[utf8]{inputenc}      % Codificación de caracteres
+\usepackage[T1]{fontenc}         % Codificación de fuentes
+\usepackage[spanish]{babel}      % Soporte para español
+\usepackage{geometry}            % Márgenes del documento
+\usepackage{enumitem}            % Personalización de listas
+\usepackage{titlesec}            % Personalización de títulos
+\usepackage{xcolor}              % Colores
+\usepackage{hyperref}            % Hipervínculos
+\usepackage{fancyhdr}            % Encabezados y pies de página
+\usepackage{tcolorbox}           % Cajas para notas o historias
+
+\geometry{top=2.5cm, bottom=2.5cm, left=2.5cm, right=2.5cm}
+
+\begin{document}
+   
+    % ==========================================
+    % PORTADA FORMAL
+    % ==========================================
+    \begin{titlepage}
+        \centering
+        \vspace*{1cm}
+        
+        {\bfseries\LARGE UNIVERSIDAD POLITÉCNICA DE CHIAPAS \par}
+        \vspace{1cm}
+        {\bfseries\Large INGENIERÍA EN TECNOLOGÍAS DE LA INFORMACIÓN E INNOVACIÓN DIGITAL \par}
+        \vspace{2cm}
+        
+        {\bfseries\Huge ESPECIFICACIÓN TÉCNICA Y DESGLOSE DE TAREAS \par}
+        \vspace{2.5cm}
+        
+        {\Large \textbf{Nombre del Proyecto:} \par}
+        \vspace{0.5cm}
+        {\Large TienditaCampus \par}
+        
+        \vspace{2.5cm}
+        
+        {\large \textbf{Integrantes del Equipo:} \par}
+        \vspace{0.4cm}
+        {\large Jaras Sánchez Luis Emilio (Líder del Proyecto) \par}
+        \vspace{0.2cm}
+        {\large Jaras Sánchez Héctor Isaac \par}
+        \vspace{0.2cm}
+        {\large Moreno Zuñiga Jesel \par}
+        
+        \vfill
+        
+    \end{titlepage}
+   
+    % ==========================================
+    % INICIO DEL DOCUMENTO
+    % ==========================================
+    \setcounter{page}{2} % Iniciar conteo en la página 2
+   
+    \begin{abstract}
+        Este documento detalla la transformación de las Historias de Usuario (negocio) que conforman el núcleo de la plataforma TienditaCampus en especificaciones técnicas y tareas de desarrollo (ingeniería), cubriendo el ciclo completo desde la autenticación hasta la analítica financiera y la configuración PWA.
+    \end{abstract}
+   
+    \hrule
+    \vspace{1.5em}
+
+    % ==========================================
+    % STACK TECNOLÓGICO
+    % ==========================================
+    \section{Stack Tecnológico y Arquitectura}
+    
+    Para garantizar el rendimiento, la escalabilidad y la instalabilidad del sistema en dispositivos móviles, se implementará una arquitectura moderna separada en cliente y servidor, utilizando el siguiente stack tecnológico:
+    
+    \begin{itemize}
+        \item \textbf{Frontend (Cliente):} Next.js 14 (React Framework) para el maquetado de la interfaz de usuario, empleando Tailwind CSS para la estética de la PWA y Framer Motion para las micro-interacciones.
+        \item \textbf{Backend (Servidor de API):} Nest.js (Node.js), seleccionado por su arquitectura modular robusta y el uso estricto de TypeScript para manejar la lógica de negocio y los algoritmos matemáticos.
+        \item \textbf{Base de Datos:} PostgreSQL, como sistema de gestión de bases de datos relacional para asegurar la integridad ACID de las transacciones financieras e inventario.
+        \item \textbf{Infraestructura PWA:} Integración nativa de \textit{Service Workers} y archivo \texttt{manifest.json} para habilitar funciones de \textit{offline caching} e instalación en pantalla de inicio.
+    \end{itemize}
+
+    \vspace{1em}
+    \hrule
+    \vspace{2em}
+   
+    % ==========================================
+    % HISTORIA 1: AUTENTICACIÓN
+    % ==========================================
+    \section{Historia 1: Autenticación Institucional Segura}
+   
+    \begin{tcolorbox}[colback=purple!5!white,colframe=purple!75!black,title=HU-01: Acceso Exclusivo]
+        \textbf{Como:} Estudiante de la UP Chiapas \\
+        \textbf{Quiero:} Iniciar sesión en la plataforma usando únicamente mi correo institucional \\
+        \textbf{Para:} Garantizar que es un entorno seguro y exclusivo para la comunidad universitaria.
+    \end{tcolorbox}
+   
+    \subsection{Criterios de Aceptación}
+    \begin{enumerate}[label=\bfseries\arabic*.]
+        \item El sistema debe bloquear cualquier intento de registro con dominios externos (ej. @gmail.com).
+        \item Solo se permiten correos con el dominio \texttt{@ids.upchiapas.edu.mx} o afines autorizados.
+        \item La contraseña debe viajar encriptada y nunca almacenarse en texto plano.
+        \item Al iniciar sesión exitosamente, se generará un JWT válido por 24 horas.
+    \end{enumerate}
+   
+    \subsection{Diseño Técnico}
+    \subsubsection*{Arquitectura de Datos}
+    \begin{itemize}
+        \item \textbf{Tabla:} \texttt{users}
+        \item \textbf{Campos clave:} \texttt{id} (uuid), \texttt{email} (unique), \texttt{password\_hash}, \texttt{role} (enum: buyer, seller).
+    \end{itemize}
+   
+    \subsubsection*{Definición de API}
+    \textbf{Endpoint:} \texttt{POST /api/v1/auth/login}
+    \begin{verbatim}
+        // Response (200 OK):
+        { "token": "eyJhbGciOi...", "user": { "email": "243697@ids.upchiapas.edu.mx", "role": "seller" } }
+    \end{verbatim}
+   
+    \subsection{Desglose de Tareas}
+    \begin{description}
+        \item[TASK-01: Endpoint y Validación (Backend)] Crear controlador Auth y regex para validar el dominio institucional.
+        \item[TASK-02: Hashing y JWT (Backend)] Integrar \textit{bcrypt} para contraseñas y \textit{Passport.js} para generar el token JWT.
+        \item[TASK-03: UI de Login (Frontend)] Maquetar formulario de acceso con feedback de errores visuales (bordes rojos).
+        \item[TASK-04: Manejo de Estado (Frontend)] Guardar JWT en HttpOnly Cookie y configurar el contexto global del usuario.
+    \end{description}
+
+    \vspace{1em}
+    \hrule
+    \vspace{2em}
+
+    % ==========================================
+    % HISTORIA 2: RENTABILIDAD
+    % ==========================================
+    \section{Historia 2: Dashboard de Rentabilidad Real}
+   
+    \begin{tcolorbox}[colback=blue!5!white,colframe=blue!75!black,title=HU-02: Cálculo de Rentabilidad]
+        \textbf{Como:} Estudiante vendedor \\
+        \textbf{Quiero:} Ver un gráfico con mi inversión, ventas totales y porcentaje de ganancia (ROI) diario \\
+        \textbf{Para:} Saber si realmente estoy ganando dinero o solo recuperando mis costos de los ingredientes.
+    \end{tcolorbox}
+   
+    \subsection{Criterios de Aceptación}
+    \begin{enumerate}[label=\bfseries\arabic*.]
+        \item El sistema calcula automáticamente la ganancia neta (Ventas Totales - Inversión).
+        \item Muestra el ROI en porcentaje (\%). Si hay pérdidas, el color cambia a rojo (Alerta).
+        \item Si no hay datos, muestra un \textit{Empty State}: ``Aún no hay datos hoy''.
+    \end{enumerate}
+   
+    \subsection{Diseño Técnico}
+    \subsubsection*{Arquitectura de Datos}
+    \begin{itemize}
+        \item \textbf{Tabla:} \texttt{daily\_finances}
+        \item \textbf{Campos clave:} \texttt{date}, \texttt{seller\_id}, \texttt{total\_invested}, \texttt{total\_sales}.
+    \end{itemize}
+   
+    \subsubsection*{Definición de API}
+    \textbf{Endpoint:} \texttt{GET /api/v1/finances/roi?date=YYYY-MM-DD}
+    \begin{verbatim}
+        // Response (200 OK):
+        { "invested": 200.00, "sales": 350.00, "netProfit": 150.00, "roi": 75.0 }
+    \end{verbatim}
+   
+    \subsection{Desglose de Tareas}
+    \begin{description}
+        \item[TASK-05: Query de Finanzas (Backend)] Consulta agrupada SQL (\textit{SUM}) para calcular totales por fecha y usuario.
+        \item[TASK-06: Algoritmo Seguro (Backend)] Lógica de negocio para calcular el Punto de Equilibrio y ROI, evitando división entre 0.
+        \item[TASK-07: Gráficos UI (Frontend)] Integrar \textit{Recharts} para mostrar barras comparativas de Inversión vs Ventas.
+        \item[TASK-08: Tarjetas de Resumen (Frontend)] Maquetar tarjetas con la Tipografía Display masiva para el porcentaje de margen.
+    \end{description}
+
+    \newpage
+
+    % ==========================================
+    % HISTORIA 3: PREDICCIÓN
+    % ==========================================
+    \section{Historia 3: Predicción de Demanda (Reducción de Merma)}
+   
+    \begin{tcolorbox}[colback=green!5!white,colframe=green!50!black,title=HU-03: Recomendación de Preparación]
+        \textbf{Como:} Estudiante vendedor de alimentos preparados \\
+        \textbf{Quiero:} Recibir una sugerencia estadística de cuántas unidades preparar para mañana \\
+        \textbf{Para:} Evitar la sobreproducción y reducir mis pérdidas económicas por merma.
+    \end{tcolorbox}
+   
+    \subsection{Criterios de Aceptación}
+    \begin{enumerate}[label=\bfseries\arabic*.]
+        \item El algoritmo promedia las ventas basándose exclusivamente en el mismo día de la semana.
+        \item Utiliza el método de Rango Intercuartil (IQR) para ignorar valores atípicos (días inusualmente altos o bajos).
+        \item Proporciona un Rango de Confianza (ej. "Prepara entre 12 y 15").
+    \end{enumerate}
+   
+    \subsection{Diseño Técnico}
+    \subsubsection*{Arquitectura de Datos}
+    \begin{itemize}
+        \item \textbf{Tabla:} \texttt{sales\_history}
+        \item \textbf{Campos clave:} \texttt{product\_id}, \texttt{quantity\_sold}, \texttt{day\_of\_week}.
+    \end{itemize}
+   
+    \subsubsection*{Definición de API}
+    \textbf{Endpoint:} \texttt{GET /api/v1/predictions/stock?productId=123\&targetDay=2}
+    \begin{verbatim}
+        // Response (200 OK):
+        { "suggestedQuantity": 15, "confidenceInterval": [12, 18], "outliersRemoved": 2 }
+    \end{verbatim}
+   
+    \subsection{Desglose de Tareas}
+    \begin{description}
+        \item[TASK-09: Extracción de Historial (Backend)] Query para obtener arrays de ventas de las últimas 4 semanas de un día específico.
+        \item[TASK-10: Motor Matemático IQR (Backend)] Programar la función pura en TypeScript para filtrar los \textit{outliers} y calcular el margen de confianza.
+        \item[TASK-11: Componente de Alerta (Frontend)] Crear el widget UI estilo "Notificación" que muestra el número a preparar.
+        \item[TASK-12: Estado de Insuficiencia (Frontend)] Renderizar \textit{tooltips} si el backend indica que no hay historial suficiente para la predicción.
+    \end{description}
+
+    \vspace{1em}
+    \hrule
+    \vspace{2em}
+
+    % ==========================================
+    % HISTORIA 4: INVENTARIO
+    % ==========================================
+    \section{Historia 4: Cierre de Día y Registro de Merma}
+   
+    \begin{tcolorbox}[colback=teal!5!white,colframe=teal!75!black,title=HU-04: Cierre de Caja]
+        \textbf{Como:} Estudiante vendedor \\
+        \textbf{Quiero:} Un botón rápido para cerrar mi jornada y registrar qué productos no se vendieron \\
+        \textbf{Para:} Alimentar mi historial financiero de forma rápida antes de entrar a mi siguiente clase.
+    \end{tcolorbox}
+   
+    \subsection{Criterios de Aceptación}
+    \begin{enumerate}[label=\bfseries\arabic*.]
+        \item Vista rápida con inputs numéricos al lado de cada producto no vendido.
+        \item Al hacer submit, el sistema descuenta el stock, suma la merma y da por terminado el día de ese vendedor.
+    \end{enumerate}
+   
+    \subsection{Desglose de Tareas}
+    \begin{description}
+        \item[TASK-13: Transacción SQL (Backend)] Asegurar que la actualización de inventario y creación de registros financieros se haga en una \textit{DB Transaction} (ACID).
+        \item[TASK-14: Endpoint de Cierre (Backend)] \texttt{POST /api/v1/inventory/close-day} que recibe un array de mermas.
+        \item[TASK-15: UI de Cierre Rápido (Frontend)] Formulario adaptado a móviles con botones de suma y resta (+ / -).
+        \item[TASK-16: Feedback Visual (Frontend)] Modal de éxito y redirección automática al Dashboard.
+    \end{description}
+
+    \newpage
+
+    % ==========================================
+    % HISTORIA 5: CATÁLOGO
+    % ==========================================
+    \section{Historia 5: Catálogo de Snacks Disponibles}
+   
+    \begin{tcolorbox}[colback=orange!5!white,colframe=orange!75!black,title=HU-05: Búsqueda en Tiempo Real]
+        \textbf{Como:} Estudiante comprador \\
+        \textbf{Quiero:} Ver una lista de los productos que están a la venta en este preciso momento \\
+        \textbf{Para:} Encontrar qué comer rápidamente sin tener que preguntar en grupos de WhatsApp.
+    \end{tcolorbox}
+   
+    \subsection{Criterios de Aceptación}
+    \begin{enumerate}[label=\bfseries\arabic*.]
+        \item La lista omite los productos con \texttt{stock = 0}.
+        \item El catálogo utiliza \textit{Infinite Scroll} para optimizar el consumo de datos móviles en la universidad.
+        \item Barra de búsqueda rápida (con retraso anti-spam) por nombre o categoría.
+    \end{enumerate}
+   
+    \subsection{Desglose de Tareas}
+    \begin{description}
+        \item[TASK-17: API Paginada (Backend)] Consulta SQL con \texttt{WHERE stock > 0}, \texttt{LIMIT}, \texttt{OFFSET} y búsqueda por \texttt{ILIKE}.
+        \item[TASK-18: Tarjetas de Producto UI (Frontend)] Maquetar las cards de snacks (Imagen duotono, Título, Precio y botón de detalle).
+        \item[TASK-19: Búsqueda Debounce (Frontend)] Programar input con un retraso (\textit{debounce}) de 300ms para evitar sobrecarga de peticiones al teclear.
+        \item[TASK-20: Infinite Scroll (Frontend)] Integrar detector de intersección para cargar automáticamente la siguiente página al hacer scroll.
+    </end{description}
+
+    \vspace{1em}
+    \hrule
+    \vspace{2em}
+
+    % ==========================================
+    % HISTORIA 6: PERFIL DEL VENDEDOR
+    % ==========================================
+    \section{Historia 6: Perfil y Estado del Vendedor}
+   
+    \begin{tcolorbox}[colback=red!5!white,colframe=red!75!black,title=HU-06: Rastreo de Vendedores Favoritos]
+        \textbf{Como:} Estudiante comprador \\
+        \textbf{Quiero:} Buscar a mi compañero vendedor por su nombre y ver si está "Activo" \\
+        \textbf{Para:} Comprarle directamente mis snacks favoritos si vino a la escuela hoy.
+    \end{tcolorbox}
+   
+    \subsection{Criterios de Aceptación}
+    \begin{enumerate}[label=\bfseries\arabic*.]
+        \item Cada vendedor tiene un perfil público con un \textit{Badge} dinámico (Verde = Vendiendo, Gris = Inactivo hoy).
+        \item El perfil muestra solo el menú de los productos que ese vendedor trajo hoy.
+    \end{enumerate}
+   
+    \subsection{Desglose de Tareas}
+    \begin{description}
+        \item[TASK-21: Lógica de Estado (Backend)] Modificar la entidad de usuario para calcular el status "Activo" dinámicamente según si tiene productos con stock.
+        \item[TASK-22: Endpoint de Perfil (Backend)] \texttt{GET /api/v1/sellers/:id} que retorna los datos del vendedor y su array de productos anidados.
+        \item[TASK-23: UI Perfil de Vendedor (Frontend)] Maquetación de cabecera de perfil, foto de avatar y \textit{Status Badge} brutalista.
+        \item[TASK-24: Menú Específico (Frontend)] Renderizar el sub-catálogo que pertenece únicamente al vendedor seleccionado.
+    \end{description}
+
+    \newpage
+
+    % ==========================================
+    % HISTORIA 7: PWA Y OFFLINE
+    % ==========================================
+    \section{Historia 7: Experiencia PWA y Acceso Rápido}
+   
+    \begin{tcolorbox}[colback=cyan!5!white,colframe=cyan!75!black,title=HU-07: Instalación como Aplicación Nativa]
+        \textbf{Como:} Usuario móvil (Comprador o Vendedor) \\
+        \textbf{Quiero:} Instalar la plataforma en la pantalla de inicio de mi celular y tener tiempos de carga casi instantáneos \\
+        \textbf{Para:} Acceder a TienditaCampus como si fuera una app nativa, sin necesidad de teclear la URL en el navegador cada vez.
+    \end{tcolorbox}
+   
+    \subsection{Criterios de Aceptación}
+    \begin{enumerate}[label=\bfseries\arabic*.]
+        \item El navegador debe ofrecer la opción de "Agregar a la pantalla de inicio" mediante un \textit{Web App Manifest} válido.
+        \item La app debe abrirse en pantalla completa (modo \textit{standalone}), ocultando la barra de direcciones del navegador.
+        \item El sistema debe almacenar la estructura visual (\textit{App Shell}) en caché para permitir cargas instantáneas en redes inestables (3G universitario).
+        \item Si el usuario pierde totalmente la conexión a internet, se debe mostrar una pantalla de \textit{Offline Fallback} en lugar del error por defecto del navegador.
+    \end{enumerate}
+   
+    \subsection{Desglose de Tareas}
+    \begin{description}
+        \item[TASK-25: Configuración de Manifest (Frontend)] Crear el archivo \texttt{manifest.json} con los metadatos de la aplicación, el color de tema (Theme Color) y la matriz de íconos requeridos (192x192px y 512x512px).
+        \item[TASK-26: Registro de Service Worker (Frontend)] Configurar el script \texttt{sw.js} en la raíz del proyecto para interceptar peticiones HTTP y habilitar el manejo inteligente de la red.
+        \item[TASK-27: Estrategia de Caché y Offline (Frontend)] Programar la estrategia \textit{Cache First} para archivos estáticos (CSS/JS/Fuentes) y maquetar la vista \texttt{offline.html} amigable.
+        \item[TASK-28: Auditoría Lighthouse (QA)] Ejecutar pruebas de rendimiento PWA utilizando \textit{Google Lighthouse} y corregir advertencias hasta alcanzar la certificación PWA total.
+    \end{description}
+
+    \vspace{1em}
+    \hrule
+    \vspace{2em}
+
+    % ==========================================
+    % ESTIMACIÓN DE ESFUERZO GLOBAL
+    % ==========================================
+    \section{Estimación de Esfuerzo Global del Proyecto}
+   
+    A continuación se presenta el resumen de las horas estimadas de desarrollo por área para completar el Minimum Viable Product (MVP) e implementarlo como PWA.
+   
+    \begin{table}[h]
+        \centering
+        \renewcommand{\arraystretch}{1.3} % Espaciado en la tabla
+        \begin{tabular}{|l|c|c|}
+            \hline
+            \textbf{Módulo / Historia} & \textbf{Cant. Tareas} & \textbf{Horas Estimadas} \\
+            \hline
+            HU-01: Autenticación & 4 & 10h \\
+            HU-02: Dashboard ROI & 4 & 14h \\
+            HU-03: Predicción Demanda & 4 & 16h \\
+            HU-04: Gestión Inventario & 4 & 12h \\
+            HU-05: Catálogo General & 4 & 14h \\
+            HU-06: Perfiles de Vendedores & 4 & 10h \\
+            HU-07: Configuración PWA \& Offline & 4 & 8h \\
+            \hline
+            \textbf{QA, Testing y Despliegue} & Transversal & 12h \\
+            \hline
+            \hline
+            \textbf{Total del Proyecto} & \textbf{28 Tareas} & \textbf{96 Horas} \\
+            \hline
+        \end{tabular}
+        \caption{Estimación de esfuerzo técnico global (Basado en metodología SCRUM).}
+    \end{table}
+
+\end{document}
