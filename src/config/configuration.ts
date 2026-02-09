@@ -9,6 +9,7 @@ export const configuration = () => ({
     port: parseInt(process.env.BACKEND_PORT ?? '3001', 10),
 
     database: {
+        url: process.env.DATABASE_URL,
         host: process.env.POSTGRES_HOST || 'localhost',
         port: parseInt(process.env.POSTGRES_PORT ?? '5432', 10),
         name: process.env.POSTGRES_DB || 'tienditacampus',
