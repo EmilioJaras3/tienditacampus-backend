@@ -11,6 +11,7 @@ export const validationSchema = Joi.object({
         .default('development'),
 
     BACKEND_PORT: Joi.number().default(3001),
+    PORT: Joi.number().default(3001),
     FRONTEND_URL: Joi.string().default('http://localhost'),
 
     // Database
@@ -20,6 +21,7 @@ export const validationSchema = Joi.object({
     POSTGRES_DB: Joi.string().optional(),
     POSTGRES_USER: Joi.string().optional(),
     POSTGRES_PASSWORD: Joi.string().optional(),
+    POSTGRES_SSL: Joi.boolean().default(true),
 
     // JWT — requerido en producción
     JWT_SECRET: Joi.string().when('NODE_ENV', {
