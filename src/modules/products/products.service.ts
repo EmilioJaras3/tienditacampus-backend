@@ -36,12 +36,11 @@ export class ProductsService {
         const qb = this.productRepository.createQueryBuilder('product')
             .where('product.sellerId = :sellerId', { sellerId: user.id })
             .andWhere('product.isActive = :isActive', { isActive: true })
-            .leftJoin(
-                'inventory_records', 'inventory',
-                `inventory.product_id = product.id AND inventory.status = 'active' AND (inventory.expires_at IS NULL OR inventory.expires_at >= CURRENT_DATE)`
-            )
+            .leftJoin('product.seller', 'seller')
+            .leftJoin('inventory_records', 'inventory', 'inventory.product_id = product.id')
             .addSelect('COALESCE(SUM(inventory.quantity_remaining), 0)', 'totalStock')
             .groupBy('product.id')
+            .addGroupBy('product.name')
             .orderBy('product.createdAt', 'DESC');
 
         const { entities, raw } = await qb.getRawAndEntities();
