@@ -47,8 +47,10 @@ import { ExpirationModule } from './modules/expiration/expiration.module';
             useFactory: (configService: ConfigService) => ({
                 uri: configService.get<string>(
                     'MONGO_URI',
-                    'mongodb://mongodb:27017/tienditacampus_logs',
+                    'mongodb://localhost:27017/tienditacampus_logs',
                 ),
+                connectTimeoutMS: 5000,
+                serverSelectionTimeoutMS: 5000,
             }),
         }),
 
