@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { MongooseModule } from '@nestjs/mongoose';
@@ -47,10 +47,8 @@ import { ExpirationModule } from './modules/expiration/expiration.module';
             useFactory: (configService: ConfigService) => ({
                 uri: configService.get<string>(
                     'MONGO_URI',
-                    'mongodb://localhost:27017/tienditacampus_logs',
+                    'mongodb://mongodb:27017/tienditacampus_logs',
                 ),
-                connectTimeoutMS: 5000,
-                serverSelectionTimeoutMS: 5000,
             }),
         }),
 
@@ -71,4 +69,14 @@ import { ExpirationModule } from './modules/expiration/expiration.module';
     ],
     controllers: [HealthController],
 })
-export class AppModule { }
+export class AppModule implements NestModule {
+    configure(consumer: MiddlewareConsumer) {
+        consumer
+            .apply((req: any, res: any, next: () => void) => {
+                const { method, originalUrl } = req;
+                console.log(`[REQUEST] ${method} ${originalUrl}`);
+                next();
+            })
+            .forRoutes('*');
+    }
+}
