@@ -11,7 +11,7 @@ services:
       - "3001:3001"
     environment:
       # URL/IP de la Base de Datos. Poner la IP publica o privada del EC2 de DB.
-      - POSTGRES_HOST=${POSTGRES_HOST:-3.219.19.219}
+      - POSTGRES_HOST=${POSTGRES_HOST:-172.31.13.248}
       - POSTGRES_PORT=${POSTGRES_PORT:-5432}
       - POSTGRES_DB=${POSTGRES_DB:-tienditacampus}
       - POSTGRES_USER=${POSTGRES_USER:-postgres}
