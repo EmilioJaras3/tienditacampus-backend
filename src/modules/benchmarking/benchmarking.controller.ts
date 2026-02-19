@@ -1,10 +1,15 @@
-import { Controller, Post, Get, Headers, UnauthorizedException, BadRequestException, Query, Body, Res, Logger, Redirect } from '@nestjs/common';
+import { Controller, Post, Get, Headers, UnauthorizedException, BadRequestException, Query, Body, Res, Logger, UseGuards } from '@nestjs/common';
 import { Response } from 'express';
 import { BenchmarkingService } from './benchmarking.service';
 import { OAuthBigQueryService } from './auth/oauth-bigquery.service';
 import { SnapshotService } from './snapshots/snapshot.service';
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { RolesGuard } from '../../common/guards/roles.guard';
+import { Roles } from '../../common/decorators/roles.decorator';
 
 @Controller('benchmarking')
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('admin')
 export class BenchmarkingController {
     private readonly logger = new Logger(BenchmarkingController.name);
 
@@ -36,22 +41,22 @@ export class BenchmarkingController {
     // --- Flujo de Snapshots (BigQuery) ---
 
     @Post('snapshot')
-    async takeSnapshot(@Headers('authorization') authHeader: string) {
-        if (!authHeader) {
-            throw new UnauthorizedException('Se requiere token de autenticación (Google OAuth)');
+    async takeSnapshot(@Headers('x-google-token') googleToken: string) {
+        if (!googleToken) {
+            throw new UnauthorizedException('Se requiere x-google-token (Google OAuth)');
         }
-        return this.benchmarkingService.processDailySnapshot(authHeader);
+        return this.benchmarkingService.processDailySnapshot(googleToken);
     }
 
     @Post('snapshot/historical')
     async takeHistoricalSnapshot(
-        @Headers('authorization') authHeader: string,
+        @Headers('x-google-token') googleToken: string,
         @Body('days') days?: number,
     ) {
-        if (!authHeader) {
-            throw new UnauthorizedException('Se requiere token de autenticación (Google OAuth)');
+        if (!googleToken) {
+            throw new UnauthorizedException('Se requiere x-google-token (Google OAuth)');
         }
-        return this.benchmarkingService.processHistoricalSnapshot(authHeader, days || 30);
+        return this.benchmarkingService.processHistoricalSnapshot(googleToken, days || 30);
     }
 
     @Post('snapshots/execute')
