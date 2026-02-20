@@ -1,0 +1,62 @@
+import {
+    Entity,
+    PrimaryGeneratedColumn,
+    Column,
+    CreateDateColumn,
+    UpdateDateColumn,
+    ManyToOne,
+    JoinColumn,
+    OneToMany,
+} from 'typeorm';
+import { User } from '../../users/entities/user.entity';
+import { SaleDetail } from './sale-detail.entity';
+
+@Entity('daily_sales')
+export class DailySale {
+    @PrimaryGeneratedColumn('uuid')
+    id: string;
+
+    @Column({ name: 'seller_id' })
+    sellerId: string;
+
+    @ManyToOne(() => User)
+    @JoinColumn({ name: 'seller_id' })
+    seller: User;
+
+    @Column({ type: 'date', name: 'sale_date', default: () => 'CURRENT_DATE' })
+    saleDate: string;
+
+    @Column({ type: 'decimal', precision: 10, scale: 2, name: 'total_investment' })
+    totalInvestment: number;
+
+    @Column({ type: 'decimal', precision: 10, scale: 2, default: 0, name: 'total_revenue' })
+    totalRevenue: number;
+
+    // Generated column handled by DB, mapping as read-only property if TypeORM supports or just selecting it
+    @Column({ type: 'decimal', precision: 10, scale: 2, name: 'total_profit', insert: false, update: false, select: true })
+    totalProfit: number;
+
+    @Column({ type: 'decimal', precision: 5, scale: 2, nullable: true, name: 'profit_margin' })
+    profitMargin: number;
+
+    @Column({ type: 'int', default: 0, name: 'units_sold' })
+    unitsSold: number;
+
+    @Column({ type: 'int', default: 0, name: 'units_lost' })
+    unitsLost: number;
+
+    @Column({ type: 'boolean', default: false, name: 'is_closed' })
+    isClosed: boolean;
+
+    @Column({ type: 'text', nullable: true })
+    notes: string;
+
+    @OneToMany(() => SaleDetail, (detail) => detail.dailySale, { cascade: true })
+    details: SaleDetail[];
+
+    @CreateDateColumn({ type: 'timestamptz', name: 'created_at' })
+    createdAt: Date;
+
+    @UpdateDateColumn({ type: 'timestamptz', name: 'updated_at' })
+    updatedAt: Date;
+}
