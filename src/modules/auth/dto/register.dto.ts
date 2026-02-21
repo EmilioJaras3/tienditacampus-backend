@@ -41,6 +41,16 @@ export class RegisterDto {
     @MaxLength(20)
     phone?: string;
 
+    @IsOptional()
+    @IsString()
+    @MaxLength(150)
+    major?: string;
+
+    @IsOptional()
+    @IsString()
+    @MaxLength(150)
+    campusLocation?: string;
+
     /**
      * Rol del usuario. Solo se permite 'seller' o 'buyer'.
      * El administrador no puede auto-asignarse el rol 'admin'.

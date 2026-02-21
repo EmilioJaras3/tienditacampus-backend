@@ -43,6 +43,16 @@ export class CreateUserDto {
     phone?: string;
 
     @IsOptional()
+    @IsString()
+    @MaxLength(150)
+    major?: string;
+
+    @IsOptional()
+    @IsString()
+    @MaxLength(150)
+    campusLocation?: string;
+
+    @IsOptional()
     @IsIn(['seller', 'buyer'], { message: 'El rol debe ser seller o buyer' })
     role?: 'seller' | 'buyer';
 }

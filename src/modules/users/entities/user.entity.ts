@@ -38,6 +38,12 @@ export class User {
     @Column({ type: 'varchar', length: 500, nullable: true, name: 'avatar_url' })
     avatarUrl: string | null;
 
+    @Column({ type: 'varchar', length: 150, nullable: true })
+    major: string | null;
+
+    @Column({ type: 'varchar', length: 150, nullable: true, name: 'campus_location' })
+    campusLocation: string | null;
+
     @Column({
         type: 'enum',
         enum: ['admin', 'seller', 'buyer'],

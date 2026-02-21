@@ -94,6 +94,8 @@ export class UsersService {
             firstName: dto.firstName,
             lastName: dto.lastName,
             phone: dto.phone ?? null,
+            major: dto.major ?? null,
+            campusLocation: dto.campusLocation ?? null,
             ...(dto.role ? { role: dto.role } : {}),
         });
 
