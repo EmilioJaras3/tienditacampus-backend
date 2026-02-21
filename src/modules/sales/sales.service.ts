@@ -173,7 +173,7 @@ export class SalesService {
                 detail.quantityPrepared = item.quantityPrepared;
                 detail.unitCost = product.unitCost;
                 detail.unitPrice = product.salePrice;
-                // detail.subtotal handled by DB generation ideally, but here we init
+                detail.subtotal = item.quantityPrepared * Number(product.salePrice);
 
                 totalInvestment += Number(product.unitCost) * item.quantityPrepared;
                 details.push(detail);

@@ -43,7 +43,7 @@ export class SaleDetail {
     @Column({ type: 'decimal', precision: 10, scale: 2, name: 'unit_price' })
     unitPrice: number;
 
-    @Column({ type: 'decimal', precision: 10, scale: 2, insert: false, update: false, select: true })
+    @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
     subtotal: number;
 
     @CreateDateColumn({ type: 'timestamptz', name: 'created_at' })
