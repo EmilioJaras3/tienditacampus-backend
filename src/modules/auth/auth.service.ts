@@ -6,6 +6,7 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { verify } from '@node-rs/argon2';
 import { UsersService } from '../users/users.service';
+import { AuditService } from '../audit/audit.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 
@@ -24,6 +25,7 @@ export class AuthService {
     constructor(
         private readonly usersService: UsersService,
         private readonly jwtService: JwtService,
+        private readonly auditService: AuditService,
     ) { }
 
     /**
@@ -42,6 +44,20 @@ export class AuthService {
         // Generar token para auto-login después del registro
         const payload = { sub: user.id, email: user.email, role: user.role };
         const accessToken = this.jwtService.sign(payload);
+
+        // ── Audit Log (JSONB) ──────────────────────────────
+        await this.auditService.log({
+            action: 'user.register',
+            entityType: 'user',
+            entityId: user.id,
+            userId: user.id,
+            description: `Nuevo usuario registrado: ${user.email}`,
+            metadata: {
+                email: user.email,
+                role: user.role,
+                registeredAt: new Date().toISOString(),
+            },
+        });
 
         return {
             user: {
@@ -83,6 +99,22 @@ export class AuthService {
         if (!isPasswordValid) {
             // Registrar intento fallido (puede bloquear la cuenta)
             await this.usersService.recordFailedLogin(user.id);
+
+            // ── Audit Log: Login fallido (JSONB) ──────────────
+            await this.auditService.log({
+                action: 'user.login_failed',
+                entityType: 'user',
+                entityId: user.id,
+                userId: user.id,
+                level: 'warn',
+                description: `Intento de login fallido para ${dto.email}`,
+                metadata: {
+                    email: dto.email,
+                    failedAttempts: user.failedLoginAttempts + 1,
+                    timestamp: new Date().toISOString(),
+                },
+            });
+
             throw new UnauthorizedException('Credenciales inválidas');
         }
 
@@ -92,6 +124,21 @@ export class AuthService {
         // ── Generar JWT ──────────────────────────────────────
         const payload = { sub: user.id, email: user.email, role: user.role };
         const accessToken = this.jwtService.sign(payload);
+
+        // ── Audit Log: Login exitoso (JSONB) ──────────────
+        await this.auditService.log({
+            action: 'user.login',
+            entityType: 'user',
+            entityId: user.id,
+            userId: user.id,
+            description: `Login exitoso: ${user.email}`,
+            metadata: {
+                email: user.email,
+                role: user.role,
+                loginCount: user.loginCount + 1,
+                lastLoginAt: new Date().toISOString(),
+            },
+        });
 
         return {
             user: {

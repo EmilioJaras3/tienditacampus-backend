@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { MongooseModule } from '@nestjs/mongoose';
 import { configuration } from './config/configuration';
 import { validationSchema } from './config/validation.schema';
 import { databaseConfig } from './config/database.config';
@@ -11,6 +12,7 @@ import { UsersModule } from './modules/users/users.module';
 import { ProductsModule } from './modules/products/products.module';
 import { SalesModule } from './modules/sales/sales.module';
 import { InventoryModule } from './modules/inventory/inventory.module';
+import { AuditModule } from './modules/audit/audit.module';
 // import { ReportsModule } from './modules/reports/reports.module';
 import { HealthController } from './common/controllers/health.controller';
 
@@ -23,10 +25,21 @@ import { HealthController } from './common/controllers/health.controller';
             validationSchema,
         }),
 
-        // Base de datos
+        // ── Base de datos RELACIONAL (PostgreSQL) ────────────
         TypeOrmModule.forRootAsync({
             inject: [ConfigService],
             useFactory: databaseConfig,
+        }),
+
+        // ── Base de datos NO RELACIONAL (MongoDB) ────────────
+        MongooseModule.forRootAsync({
+            inject: [ConfigService],
+            useFactory: (configService: ConfigService) => ({
+                uri: configService.get<string>(
+                    'MONGO_URI',
+                    'mongodb://mongodb:27017/tienditacampus_logs',
+                ),
+            }),
         }),
 
         // Módulos activos
@@ -35,6 +48,7 @@ import { HealthController } from './common/controllers/health.controller';
         ProductsModule,
         InventoryModule,
         SalesModule,
+        AuditModule,
 
         // Módulos (descomentar conforme se implementen)
         // ReportsModule,
