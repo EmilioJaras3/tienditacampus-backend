@@ -15,6 +15,7 @@ import { InventoryModule } from './modules/inventory/inventory.module';
 import { AuditModule } from './modules/audit/audit.module';
 // import { ReportsModule } from './modules/reports/reports.module';
 import { HealthController } from './common/controllers/health.controller';
+import { OrdersModule } from './modules/orders/orders.module';
 
 @Module({
     imports: [
@@ -49,6 +50,7 @@ import { HealthController } from './common/controllers/health.controller';
         InventoryModule,
         SalesModule,
         AuditModule,
+        OrdersModule,
 
         // Módulos (descomentar conforme se implementen)
         // ReportsModule,
