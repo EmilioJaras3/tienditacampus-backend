@@ -10,12 +10,15 @@ import { User } from './entities/user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { hash } from '@node-rs/argon2';
+import { Product } from '../products/entities/product.entity';
 
 @Injectable()
 export class UsersService {
     constructor(
         @InjectRepository(User)
         private readonly usersRepository: Repository<User>,
+        @InjectRepository(Product)
+        private readonly productRepository: Repository<Product>,
         private readonly configService: ConfigService,
     ) { }
 
@@ -38,7 +41,7 @@ export class UsersService {
         });
     }
 
-    async getPublicProfile(id: string): Promise<Partial<User>> {
+    async getPublicProfile(id: string): Promise<any> {
         const user = await this.usersRepository.findOne({
             where: { id, isActive: true },
             select: ['id', 'firstName', 'lastName', 'email', 'avatarUrl', 'createdAt', 'role']
@@ -48,7 +51,22 @@ export class UsersService {
             throw new NotFoundException('Vendedor no encontrado');
         }
 
-        return user;
+        // Obtener los productos activos con stock del vendedor
+        const products = await this.productRepository.createQueryBuilder('product')
+            .where('product.seller_id = :sellerId', { sellerId: id })
+            .andWhere('product.isActive = :isActive', { isActive: true })
+            .andWhere(`EXISTS (
+                SELECT 1 FROM inventory_records inventory 
+                WHERE inventory.product_id = product.id 
+                AND inventory.quantity_remaining > 0 
+                AND inventory.status = 'active'
+            )`)
+            .getMany();
+
+        return {
+            ...user,
+            products,
+        };
     }
 
     /**
