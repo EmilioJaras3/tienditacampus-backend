@@ -29,16 +29,13 @@ export class ProductsService {
         });
     }
 
-    async findMarketplace(query?: string, sellerId?: string): Promise<Product[]> {
+    async findMarketplace(query?: string, sellerId?: string): Promise<any[]> {
         const qb = this.productRepository.createQueryBuilder('product')
             .leftJoinAndSelect('product.seller', 'seller')
+            .innerJoin('inventory_records', 'inventory', 'inventory.product_id = product.id AND inventory.status = \'active\'')
+            .addSelect('inventory.quantity_remaining', 'quantityRemaining')
             .where('product.isActive = :isActive', { isActive: true })
-            .andWhere(`EXISTS (
-                SELECT 1 FROM inventory_records inventory 
-                WHERE inventory.product_id = product.id 
-                AND inventory.quantity_remaining > 0 
-                AND inventory.status = 'active'
-            )`);
+            .andWhere('inventory.quantity_remaining > 0');
 
         if (sellerId) {
             qb.andWhere('seller.id = :sellerId', { sellerId });
@@ -50,7 +47,14 @@ export class ProductsService {
 
         qb.orderBy('product.createdAt', 'DESC');
 
-        return await qb.getMany();
+        const { entities, raw } = await qb.getRawAndEntities();
+
+        return entities.map((entity, index) => {
+            return {
+                ...entity,
+                quantityRemaining: parseInt(raw[index].quantityRemaining, 10),
+            };
+        });
     }
 
     async findOne(id: string, user: User): Promise<Product> {
