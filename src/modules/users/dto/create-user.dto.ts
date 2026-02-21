@@ -1,5 +1,6 @@
 import {
     IsEmail,
+    IsIn,
     IsNotEmpty,
     IsOptional,
     IsString,
@@ -40,4 +41,8 @@ export class CreateUserDto {
     @IsString()
     @MaxLength(20)
     phone?: string;
+
+    @IsOptional()
+    @IsIn(['seller', 'buyer'], { message: 'El rol debe ser seller o buyer' })
+    role?: 'seller' | 'buyer';
 }

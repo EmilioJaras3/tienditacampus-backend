@@ -1,5 +1,6 @@
 import {
     IsEmail,
+    IsIn,
     IsNotEmpty,
     IsOptional,
     IsString,
@@ -39,4 +40,13 @@ export class RegisterDto {
     @IsString()
     @MaxLength(20)
     phone?: string;
+
+    /**
+     * Rol del usuario. Solo se permite 'seller' o 'buyer'.
+     * El administrador no puede auto-asignarse el rol 'admin'.
+     * Si no se envía, la entidad User asignará 'seller' por defecto.
+     */
+    @IsOptional()
+    @IsIn(['seller', 'buyer'], { message: 'El rol debe ser seller o buyer' })
+    role?: 'seller' | 'buyer';
 }

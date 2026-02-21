@@ -94,6 +94,7 @@ export class UsersService {
             firstName: dto.firstName,
             lastName: dto.lastName,
             phone: dto.phone ?? null,
+            ...(dto.role ? { role: dto.role } : {}),
         });
 
         return this.usersRepository.save(user) as Promise<User>;

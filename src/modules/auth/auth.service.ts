@@ -39,6 +39,7 @@ export class AuthService {
             firstName: dto.firstName,
             lastName: dto.lastName,
             phone: dto.phone,
+            role: dto.role,
         });
 
         // Generar token para auto-login después del registro
