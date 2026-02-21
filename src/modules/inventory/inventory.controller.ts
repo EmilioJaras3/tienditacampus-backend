@@ -9,11 +9,17 @@ import {
 } from '@nestjs/common';
 import { InventoryService } from './inventory.service';
 import { CreateInventoryRecordDto } from './dto/create-inventory-record.dto';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { RolesGuard } from '../../common/guards/roles.guard';
+import { Roles } from '../../common/decorators/roles.decorator';
 import { User } from '../users/entities/user.entity';
 
+/**
+ * InventoryController — Solo accesible para sellers y admins.
+ */
 @Controller('inventory')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('seller', 'admin')
 export class InventoryController {
     constructor(private readonly inventoryService: InventoryService) { }
 

@@ -10,11 +10,18 @@ import {
 import { SalesService } from './sales.service';
 import { PrepareDailySaleDto } from './dto/prepare-daily-sale.dto';
 import { TrackSaleDto } from './dto/track-sale.dto';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { RolesGuard } from '../../common/guards/roles.guard';
+import { Roles } from '../../common/decorators/roles.decorator';
 import { User } from '../users/entities/user.entity';
 
+/**
+ * SalesController — Solo accesible para sellers y admins.
+ * El guard a nivel de clase aplica JWT + Roles a todos los endpoints.
+ */
 @Controller('sales')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('seller', 'admin')
 export class SalesController {
     constructor(private readonly salesService: SalesService) { }
 
@@ -33,6 +40,7 @@ export class SalesController {
     trackProduct(@Body() trackDto: TrackSaleDto, @Req() req: any) {
         return this.salesService.trackProduct(trackDto, req.user as User);
     }
+
     @Get('roi')
     getROI(
         @Req() req: any,
