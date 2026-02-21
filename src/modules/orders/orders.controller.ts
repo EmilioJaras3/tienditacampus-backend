@@ -28,4 +28,11 @@ export class OrdersController {
     async getSellerSales(@Req() req: any) {
         return this.ordersService.getSellerSales(req.user as User);
     }
+
+    @Post(':id/deliver')
+    @Roles('buyer', 'seller', 'admin')
+    async deliverOrder(@Req() req: any, @Body() body: any) {
+        // We use Post to make it simpler, but acting as Patch
+        return this.ordersService.deliverOrder(req.params.id, req.user as User);
+    }
 }

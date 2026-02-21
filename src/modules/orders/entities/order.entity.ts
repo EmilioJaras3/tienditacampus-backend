@@ -33,8 +33,11 @@ export class Order {
     @Column({ type: 'decimal', precision: 10, scale: 2, name: 'total_amount' })
     totalAmount: number;
 
-    @Column({ type: 'varchar', default: 'completed' })
-    status: string; // 'completed', 'cancelled'
+    @Column({ type: 'varchar', default: 'pending' })
+    status: string; // 'pending', 'completed', 'cancelled'
+
+    @Column({ type: 'text', nullable: true, name: 'delivery_message' })
+    deliveryMessage: string | null;
 
     @OneToMany(() => OrderItem, (item: OrderItem) => item.order, { cascade: true })
     items: OrderItem[];

@@ -74,7 +74,8 @@ export class OrdersService {
             order.buyerId = buyer.id;
             order.sellerId = dto.sellerId;
             order.totalAmount = totalOrderAmount;
-            order.status = 'completed';
+            order.status = 'pending'; // Changed from 'completed'
+            order.deliveryMessage = dto.deliveryMessage || null;
 
             order = await queryRunner.manager.save(Order, order);
 
@@ -84,74 +85,6 @@ export class OrdersService {
                 orderItem.orderId = order.id;
                 await queryRunner.manager.save(OrderItem, orderItem);
             }
-
-            // 3. Automate Sales Tracking for the Seller (Upsert DailySale)
-            const todayStr = new Date().toISOString().split('T')[0];
-            let dailySale = await queryRunner.manager.findOne(DailySale, {
-                where: { sellerId: dto.sellerId, saleDate: todayStr },
-                relations: ['details']
-            });
-
-            if (!dailySale) {
-                // Seller didn't start the day manually. Auto-start it.
-                dailySale = new DailySale();
-                dailySale.sellerId = dto.sellerId;
-                dailySale.saleDate = todayStr;
-                dailySale.totalInvestment = 0; // Will be calculated if they prepared things previously, but here we just auto-track revenue
-                dailySale.totalRevenue = 0;
-                dailySale.unitsSold = 0;
-                dailySale.unitsLost = 0;
-                dailySale.details = [];
-                dailySale = await queryRunner.manager.save(DailySale, dailySale);
-            }
-
-            for (const orderItem of orderItemsToSave) {
-                // Find existing sale detail for this product today
-                let saleDetail = dailySale.details.find(d => d.productId === orderItem.productId);
-
-                if (!saleDetail) {
-                    // Create it
-                    saleDetail = new SaleDetail();
-                    saleDetail.dailySaleId = dailySale.id;
-                    saleDetail.productId = orderItem.productId;
-                    saleDetail.quantityPrepared = 0; // Because it wasn't prepared manually
-                    saleDetail.quantitySold = 0;
-                    saleDetail.quantityLost = 0;
-                    saleDetail.unitCost = await this.getUnitCost(queryRunner, orderItem.productId);
-                    saleDetail.unitPrice = orderItem.unitPrice;
-                    saleDetail.subtotal = 0;
-                }
-
-                saleDetail.quantitySold += orderItem.quantity;
-                saleDetail.subtotal = saleDetail.quantitySold * Number(saleDetail.unitPrice);
-                await queryRunner.manager.save(SaleDetail, saleDetail);
-
-                // Update DailySale aggregate (we will re-calc below)
-            }
-
-            // Recalculate DailySale Aggregates
-            const allDetails = await queryRunner.manager.find(SaleDetail, { where: { dailySaleId: dailySale.id } });
-
-            let totalRevenue = 0;
-            let unitsSold = 0;
-            let totalInvestment = 0;
-
-            for (const d of allDetails) {
-                totalRevenue += Number(d.unitPrice) * d.quantitySold;
-                unitsSold += d.quantitySold;
-                // Add to investment based on *prepared*, or if they didn't prepare, base it on sold stock mapping
-                const investmentContrib = d.quantityPrepared > 0 ? d.quantityPrepared : d.quantitySold;
-                totalInvestment += Number(d.unitCost) * investmentContrib;
-            }
-
-            dailySale.totalRevenue = totalRevenue;
-            dailySale.totalInvestment = totalInvestment;
-            dailySale.unitsSold = unitsSold;
-
-            const profit = totalRevenue - totalInvestment;
-            dailySale.profitMargin = totalRevenue > 0 ? (profit / totalRevenue) * 100 : 0;
-
-            await queryRunner.manager.save(DailySale, dailySale);
 
             await queryRunner.commitTransaction();
 
@@ -169,6 +102,107 @@ export class OrdersService {
                 throw error;
             }
             throw new InternalServerErrorException('No se pudo procesar la compra.');
+        } finally {
+            await queryRunner.release();
+        }
+    }
+
+    async deliverOrder(orderId: string, user: User): Promise<Order> {
+        const order = await this.orderRepo.findOne({
+            where: { id: orderId },
+            relations: ['items', 'items.product', 'seller', 'buyer']
+        });
+
+        if (!order) {
+            throw new NotFoundException('Orden no encontrada');
+        }
+
+        if (order.status !== 'pending') {
+            throw new BadRequestException('Esta orden ya fue procesada o cancelada');
+        }
+
+        if (order.buyerId !== user.id && order.sellerId !== user.id) {
+            throw new BadRequestException('No tienes permiso para confirmar esta orden');
+        }
+
+        const queryRunner = this.dataSource.createQueryRunner();
+        await queryRunner.connect();
+        await queryRunner.startTransaction();
+
+        try {
+            // Update the Order status
+            order.status = 'completed';
+            await queryRunner.manager.save(Order, order);
+
+            // Trigger the DailySale Tracking
+            const todayStr = new Date().toISOString().split('T')[0];
+            let dailySale = await queryRunner.manager.findOne(DailySale, {
+                where: { sellerId: order.sellerId, saleDate: todayStr },
+                relations: ['details']
+            });
+
+            if (!dailySale) {
+                dailySale = new DailySale();
+                dailySale.sellerId = order.sellerId;
+                dailySale.saleDate = todayStr;
+                dailySale.totalInvestment = 0;
+                dailySale.totalRevenue = 0;
+                dailySale.unitsSold = 0;
+                dailySale.unitsLost = 0;
+                dailySale.details = [];
+                dailySale = await queryRunner.manager.save(DailySale, dailySale);
+            }
+
+            for (const orderItem of order.items) {
+                let saleDetail = dailySale.details.find(d => d.productId === orderItem.productId);
+
+                if (!saleDetail) {
+                    saleDetail = new SaleDetail();
+                    saleDetail.dailySaleId = dailySale.id;
+                    saleDetail.productId = orderItem.productId;
+                    saleDetail.quantityPrepared = 0;
+                    saleDetail.quantitySold = 0;
+                    saleDetail.quantityLost = 0;
+                    saleDetail.unitCost = await this.getUnitCost(queryRunner, orderItem.productId);
+                    saleDetail.unitPrice = orderItem.unitPrice;
+                    saleDetail.subtotal = 0;
+                }
+
+                saleDetail.quantitySold += orderItem.quantity;
+                saleDetail.subtotal = saleDetail.quantitySold * Number(saleDetail.unitPrice);
+                await queryRunner.manager.save(SaleDetail, saleDetail);
+            }
+
+            // Recalculate DailySale Aggregates
+            const allDetails = await queryRunner.manager.find(SaleDetail, { where: { dailySaleId: dailySale.id } });
+
+            let totalRevenue = 0;
+            let unitsSold = 0;
+            let totalInvestment = 0;
+
+            for (const d of allDetails) {
+                totalRevenue += Number(d.unitPrice) * d.quantitySold;
+                unitsSold += d.quantitySold;
+                const investmentContrib = d.quantityPrepared > 0 ? d.quantityPrepared : d.quantitySold;
+                totalInvestment += Number(d.unitCost) * investmentContrib;
+            }
+
+            dailySale.totalRevenue = totalRevenue;
+            dailySale.totalInvestment = totalInvestment;
+            dailySale.unitsSold = unitsSold;
+
+            const profit = totalRevenue - totalInvestment;
+            dailySale.profitMargin = totalRevenue > 0 ? (profit / totalRevenue) * 100 : 0;
+
+            await queryRunner.manager.save(DailySale, dailySale);
+
+            await queryRunner.commitTransaction();
+
+            return order;
+        } catch (error) {
+            await queryRunner.rollbackTransaction();
+            console.error('Delivery Transaction Error:', error);
+            throw new InternalServerErrorException('Error al confirmar la recepción');
         } finally {
             await queryRunner.release();
         }
