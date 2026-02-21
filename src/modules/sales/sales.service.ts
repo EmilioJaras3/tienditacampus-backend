@@ -7,6 +7,7 @@ import { Product } from '../products/entities/product.entity';
 import { PrepareDailySaleDto } from './dto/prepare-daily-sale.dto';
 import { TrackSaleDto } from './dto/track-sale.dto';
 import { User } from '../users/entities/user.entity';
+import { InventoryRecord } from '../inventory/entities/inventory-record.entity';
 
 @Injectable()
 export class SalesService {
@@ -94,15 +95,6 @@ export class SalesService {
         for (const item of wastes) {
             const detail = dailySale.details.find(d => d.productId === item.productId);
             if (detail) {
-                // Logic: If user marks waste, we assume remaining prepared quantity 
-                // minus waste was sold? 
-                // Or simplified: Update Lost = waste. Sold remains as tracked?
-                // The implementation depends on workflow. Let's assume:
-                // Workflow A: Track sales live -> Waste is just extra info.
-                // Workflow B: Quick close -> Sold = Prepared - Waste.
-                // Given "Quick Close" context, B is likely intended for rapid entry.
-                // So: Sold = Prepared - Waste
-
                 const waste = Number(item.waste);
                 if (waste > detail.quantityPrepared) {
                     throw new BadRequestException(`Merma (${waste}) no puede exceder preparado (${detail.quantityPrepared}) para ${detail.product.name}`);
@@ -110,25 +102,26 @@ export class SalesService {
 
                 detail.quantityLost = waste;
                 detail.quantitySold = detail.quantityPrepared - waste;
-
-                // Update stock logic could go here if we tracked persistent inventory across days,
-                // but currently stock seems per-transaction or simple numeric.
-                // Since Products have "stock" column, we should deduct sold?
-                // Actually stock management usually happens at "Prepare" phase (deduct raw materials/stock).
-                // If "Product" is the finished good, then stock is updated when we Prepare?
-                // For now, let's just update the financial record.
-
                 await this.saleDetailRepository.save(detail);
 
-                // Update product stock (inventory) to reflect end of day?
-                // Usually stock = 0 at end of day for perishable.
-                // So let's zero out the product stock if it's perishable.
-                if (detail.product.isPerishable) {
-                    await this.productRepository.update(item.productId, { stock: 0 } as any);
-                } else {
-                    // If non-perishable, stock remains? 
-                    // Or stock was deducted when prepared? 
-                    // Let's assume simplified flow: just financial record.
+                // Update inventory record (HU-04 fix)
+                const activeInventory = await this.dataSource.getRepository(InventoryRecord).findOne({
+                    where: {
+                        productId: item.productId,
+                        sellerId: user.id,
+                        status: 'active'
+                    }
+                });
+
+                if (activeInventory) {
+                    activeInventory.quantityRemaining = 0;
+                    if (detail.product.isPerishable) {
+                        activeInventory.status = 'expired';
+                    } else {
+                        // Or 'closed' to signify end of day regardless 
+                        activeInventory.status = 'closed';
+                    }
+                    await this.dataSource.getRepository(InventoryRecord).save(activeInventory);
                 }
             }
         }
@@ -282,13 +275,21 @@ export class SalesService {
         return await this.dailySaleRepository.save(sale);
     }
 
-    async getROI(user: User) {
-        const { sum_invest, sum_revenue } = await this.dailySaleRepository
+    async getROI(user: User, startDate?: string, endDate?: string) {
+        let qs = this.dailySaleRepository
             .createQueryBuilder('sale')
             .select('SUM(sale.totalInvestment)', 'sum_invest')
             .addSelect('SUM(sale.totalRevenue)', 'sum_revenue')
-            .where('sale.sellerId = :sellerId', { sellerId: user.id })
-            .getRawOne();
+            .where('sale.sellerId = :sellerId', { sellerId: user.id });
+
+        if (startDate) {
+            qs = qs.andWhere('sale.saleDate >= :startDate', { startDate });
+        }
+        if (endDate) {
+            qs = qs.andWhere('sale.saleDate <= :endDate', { endDate });
+        }
+
+        const { sum_invest, sum_revenue } = await qs.getRawOne();
 
         const investment = Number(sum_invest || 0);
         const revenue = Number(sum_revenue || 0);
