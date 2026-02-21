@@ -5,6 +5,7 @@ import {
     Body,
     Req,
     UseGuards,
+    Query,
 } from '@nestjs/common';
 import { SalesService } from './sales.service';
 import { PrepareDailySaleDto } from './dto/prepare-daily-sale.dto';
@@ -33,8 +34,12 @@ export class SalesController {
         return this.salesService.trackProduct(trackDto, req.user as User);
     }
     @Get('roi')
-    getROI(@Req() req: any) {
-        return this.salesService.getROI(req.user as User);
+    getROI(
+        @Req() req: any,
+        @Query('startDate') startDate?: string,
+        @Query('endDate') endDate?: string
+    ) {
+        return this.salesService.getROI(req.user as User, startDate, endDate);
     }
 
     @Get('history')
