@@ -40,7 +40,7 @@ export class OrdersService {
                     throw new NotFoundException(`Producto ${item.productId} no encontrado o inactivo`);
                 }
 
-                // Verify and deduct stock
+                // Verify stock exists (but don't deduct yet)
                 const activeInventory = await queryRunner.manager.findOne(InventoryRecord, {
                     where: { productId: product.id, status: 'active' }
                 });
@@ -48,12 +48,6 @@ export class OrdersService {
                 if (!activeInventory || activeInventory.quantityRemaining < item.quantity) {
                     throw new BadRequestException(`Sin stock suficiente para el producto: ${product.name}`);
                 }
-
-                activeInventory.quantityRemaining -= item.quantity;
-                if (activeInventory.quantityRemaining === 0) {
-                    activeInventory.status = product.isPerishable ? 'expired' : 'sold_out';
-                }
-                await queryRunner.manager.save(InventoryRecord, activeInventory);
 
                 // calculate item total
                 const subtotal = item.quantity * Number(product.salePrice);
@@ -74,7 +68,7 @@ export class OrdersService {
             order.buyerId = buyer.id;
             order.sellerId = dto.sellerId;
             order.totalAmount = totalOrderAmount;
-            order.status = 'pending'; // Changed from 'completed'
+            order.status = 'requested'; // Changed from 'pending', now stock is only deducted on accept
             order.deliveryMessage = dto.deliveryMessage || null;
 
             order = await queryRunner.manager.save(Order, order);
@@ -105,6 +99,61 @@ export class OrdersService {
         } finally {
             await queryRunner.release();
         }
+    }
+
+    async acceptOrder(orderId: string, seller: User): Promise<Order> {
+        const order = await this.orderRepo.findOne({
+            where: { id: orderId },
+            relations: ['items', 'items.product']
+        });
+
+        if (!order) throw new NotFoundException('Orden no encontrada');
+        if (order.sellerId !== seller.id) throw new BadRequestException('No tienes permiso para aceptar esta orden');
+        if (order.status !== 'requested') throw new BadRequestException('La orden no está en estado solicitado');
+
+        const queryRunner = this.dataSource.createQueryRunner();
+        await queryRunner.connect();
+        await queryRunner.startTransaction();
+
+        try {
+            // Deduct stock
+            for (const item of order.items) {
+                const activeInventory = await queryRunner.manager.findOne(InventoryRecord, {
+                    where: { productId: item.productId, status: 'active' }
+                });
+
+                if (!activeInventory || activeInventory.quantityRemaining < item.quantity) {
+                    throw new BadRequestException(`Sin stock suficiente para completar la orden del producto: ${item.product?.name}`);
+                }
+
+                activeInventory.quantityRemaining -= item.quantity;
+                if (activeInventory.quantityRemaining === 0) {
+                    activeInventory.status = item.product?.isPerishable ? 'expired' : 'sold_out';
+                }
+                await queryRunner.manager.save(InventoryRecord, activeInventory);
+            }
+
+            order.status = 'pending'; // Aceptado, listo para entregar
+            await queryRunner.manager.save(Order, order);
+            await queryRunner.commitTransaction();
+            return order;
+        } catch (error) {
+            await queryRunner.rollbackTransaction();
+            if (error instanceof BadRequestException) throw error;
+            throw new InternalServerErrorException('No se pudo aceptar la orden.');
+        } finally {
+            await queryRunner.release();
+        }
+    }
+
+    async rejectOrder(orderId: string, seller: User): Promise<Order> {
+        const order = await this.orderRepo.findOne({ where: { id: orderId } });
+        if (!order) throw new NotFoundException('Orden no encontrada');
+        if (order.sellerId !== seller.id) throw new BadRequestException('No tienes permiso para rechazar esta orden');
+        if (order.status !== 'requested') throw new BadRequestException('Solo puedes rechazar órdenes solicitadas');
+
+        order.status = 'rejected';
+        return this.orderRepo.save(order);
     }
 
     async deliverOrder(orderId: string, user: User): Promise<Order> {

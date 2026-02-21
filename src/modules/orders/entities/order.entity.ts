@@ -33,8 +33,8 @@ export class Order {
     @Column({ type: 'decimal', precision: 10, scale: 2, name: 'total_amount' })
     totalAmount: number;
 
-    @Column({ type: 'varchar', default: 'pending' })
-    status: string; // 'pending', 'completed', 'cancelled'
+    @Column({ type: 'varchar', default: 'requested' })
+    status: string; // 'requested', 'pending', 'completed', 'cancelled', 'rejected'
 
     @Column({ type: 'text', nullable: true, name: 'delivery_message' })
     deliveryMessage: string | null;

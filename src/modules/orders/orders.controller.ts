@@ -29,6 +29,18 @@ export class OrdersController {
         return this.ordersService.getSellerSales(req.user as User);
     }
 
+    @Post(':id/accept')
+    @Roles('seller', 'admin')
+    async acceptOrder(@Req() req: any) {
+        return this.ordersService.acceptOrder(req.params.id, req.user as User);
+    }
+
+    @Post(':id/reject')
+    @Roles('seller', 'admin')
+    async rejectOrder(@Req() req: any) {
+        return this.ordersService.rejectOrder(req.params.id, req.user as User);
+    }
+
     @Post(':id/deliver')
     @Roles('buyer', 'seller', 'admin')
     async deliverOrder(@Req() req: any, @Body() body: any) {
