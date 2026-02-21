@@ -23,9 +23,21 @@ export class ProductsService {
     }
 
     async findAll(user: User): Promise<Product[]> {
-        return await this.productRepository.find({
-            where: { sellerId: user.id, isActive: true },
-            order: { createdAt: 'DESC' },
+        const qb = this.productRepository.createQueryBuilder('product')
+            .where('product.sellerId = :sellerId', { sellerId: user.id })
+            .andWhere('product.isActive = :isActive', { isActive: true })
+            .leftJoin('inventory_records', 'inventory', 'inventory.product_id = product.id AND inventory.status = \'active\'')
+            .addSelect('COALESCE(SUM(inventory.quantity_remaining), 0)', 'totalStock')
+            .groupBy('product.id')
+            .orderBy('product.createdAt', 'DESC');
+
+        const { entities, raw } = await qb.getRawAndEntities();
+
+        return entities.map((entity, index) => {
+            return {
+                ...entity,
+                stock: parseInt(raw[index].totalStock, 10), // We will attach this virtual property
+            } as unknown as Product;
         });
     }
 
