@@ -18,8 +18,9 @@ export class SalesController {
     constructor(private readonly salesService: SalesService) { }
 
     @Get('today')
-    getToday(@Req() req: any) {
-        return this.salesService.findToday(req.user as User);
+    async getToday(@Req() req: any) {
+        const result = await this.salesService.findToday(req.user as User);
+        return result || null;
     }
 
     @Post('prepare')
