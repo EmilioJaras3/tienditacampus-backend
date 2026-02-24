@@ -39,7 +39,7 @@ export class Product {
     @Column({ type: 'int', nullable: true, name: 'shelf_life_days' })
     shelfLifeDays: number;
 
-    @Column({ type: 'varchar', length: 500, nullable: true, name: 'image_url' })
+    @Column({ type: 'text', nullable: true, name: 'image_url' })
     imageUrl: string;
 
     @Column({ type: 'boolean', default: true, name: 'is_active' })

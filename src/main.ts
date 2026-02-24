@@ -2,9 +2,14 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module';
+import * as express from 'express';
 
 async function bootstrap() {
     const app = await NestFactory.create(AppModule);
+
+    // Aumentar el límite de tamaño para JSON (Base64 images)
+    app.use(express.json({ limit: '10mb' }));
+    app.use(express.urlencoded({ limit: '10mb', extended: true }));
     const configService = app.get(ConfigService);
 
     // Prefijo global para la API
