@@ -33,8 +33,4 @@ export class CreateProductDto {
     @IsUUID()
     @IsNotEmpty()
     categoryId: string;
-
-    @IsString()
-    @IsOptional()
-    subcategory?: string;
 }

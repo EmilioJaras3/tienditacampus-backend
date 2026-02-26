@@ -35,8 +35,6 @@ export class Product {
     @Column({ type: 'text', nullable: true })
     description: string;
 
-    @Column({ type: 'varchar', length: 100, nullable: true })
-    subcategory: string;
 
     @Column({ type: 'decimal', precision: 10, scale: 2, name: 'unit_cost' })
     unitCost: number;
