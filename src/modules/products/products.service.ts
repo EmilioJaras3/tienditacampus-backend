@@ -76,7 +76,43 @@ export class ProductsService {
 
         const rawResults = await qb.getRawMany();
 
-        return rawResults.map(raw => ({
+        // Obtener historial de merma de los últimos 30 días para todos los productos del vendedor
+        const wasteRates = await this.productRepository.query(
+            `SELECT
+                sd.product_id,
+                COALESCE(SUM(sd.quantity_lost), 0)::int AS total_lost,
+                COALESCE(SUM(sd.quantity_sold + sd.quantity_lost), 0)::int AS total_handled
+            FROM sale_details sd
+            INNER JOIN daily_sales ds ON ds.id = sd.daily_sale_id
+            WHERE ds.seller_id = $1
+              AND ds.sale_date >= (CURRENT_DATE - INTERVAL '30 days')
+            GROUP BY sd.product_id`,
+            [user.id]
+        );
+
+        const wasteRateMap = new Map<string, number>();
+        wasteRates.forEach((row: any) => {
+            const lost = Number(row.total_lost);
+            const handled = Number(row.total_handled);
+            wasteRateMap.set(row.product_id, handled > 0 ? lost / handled : 0);
+        });
+
+        return rawResults.map(raw => {
+            const stock = parseInt(raw.stock, 10);
+            const unitCost = parseFloat(raw.product_unit_cost);
+            const salePrice = parseFloat(raw.product_sale_price);
+            
+            // Cálculo del Break-Even Real en el backend
+            const wasteRate = wasteRateMap.get(raw.product_id) || 0;
+            const effectiveUnitCost = unitCost * (1 + wasteRate);
+            const margin = salePrice - effectiveUnitCost;
+            const totalInvestment = stock * unitCost; // Los gastos fijos del stock retenido
+            
+            const breakEvenUnits = margin > 0 && totalInvestment > 0 
+                ? Math.ceil(totalInvestment / margin) 
+                : 0;
+
+            return {
             id: raw.product_id,
             name: raw.product_name,
             description: raw.product_description,
@@ -85,14 +121,16 @@ export class ProductsService {
             isPerishable: raw.product_is_perishable,
             shelfLifeDays: raw.product_shelf_life_days,
             imageUrl: raw.product_image_url,
-            isActive: raw.product_is_active,
             createdAt: raw.product_created_at,
             category: raw.cat_id ? {
                 id: raw.cat_id,
                 name: raw.cat_name
             } : null,
-            stock: parseInt(raw.stock, 10)
-        }));
+            stock,
+            wasteRate: Number((wasteRate * 100).toFixed(2)),
+            breakEvenUnits
+        };
+    });
     }
 
     async findMarketplace(query?: string, sellerId?: string, category?: string): Promise<any[]> {
