@@ -44,4 +44,12 @@ export const validationSchema = Joi.object({
     // Security
     MAX_FAILED_LOGIN_ATTEMPTS: Joi.number().default(5),
     LOCKOUT_DURATION_MINUTES: Joi.number().default(15),
+
+    // BigQuery / Google OAuth
+    GCP_PROJECT_ID: Joi.string().optional(),
+    BIGQUERY_DATASET: Joi.string().optional(),
+    BIGQUERY_TABLE: Joi.string().optional(),
+    GOOGLE_CLIENT_ID: Joi.string().optional(),
+    GOOGLE_CLIENT_SECRET: Joi.string().optional(),
+    GOOGLE_REDIRECT_URI: Joi.string().optional(),
 });
