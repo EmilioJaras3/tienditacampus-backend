@@ -144,6 +144,13 @@ export class UsersService {
     }
 
     /**
+     * Actualiza el rol de un usuario.
+     */
+    async updateRole(id: string, role: 'admin' | 'seller' | 'buyer'): Promise<void> {
+        await this.usersRepository.update(id, { role });
+    }
+
+    /**
      * Actualiza la fecha de cambio de contraseña.
      */
     async updatePasswordChangedAt(id: string): Promise<void> {
