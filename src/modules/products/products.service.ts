@@ -69,6 +69,20 @@ export class ProductsService {
         });
     }
 
+    async findOneMarketplace(id: string): Promise<Product> {
+        const product = await this.productRepository.createQueryBuilder('product')
+            .leftJoinAndSelect('product.seller', 'seller')
+            .where('product.id = :id', { id })
+            .andWhere('product.isActive = :isActive', { isActive: true })
+            .getOne();
+
+        if (!product) {
+            throw new NotFoundException(`Product with ID ${id} not found or inactive`);
+        }
+
+        return product;
+    }
+
     async findOne(id: string, user: User): Promise<Product> {
         const product = await this.productRepository.findOne({
             where: { id, sellerId: user.id, isActive: true },

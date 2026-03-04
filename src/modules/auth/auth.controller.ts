@@ -10,6 +10,7 @@ import {
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
+import { GoogleLoginDto } from './dto/google-login.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 
@@ -34,6 +35,16 @@ export class AuthController {
     @HttpCode(HttpStatus.OK)
     async login(@Body() dto: LoginDto) {
         return this.authService.login(dto);
+    }
+
+    /**
+     * POST /api/auth/google
+     * Autentica (o registra) con token de OAuth2 de Google.
+     */
+    @Post('google')
+    @HttpCode(HttpStatus.OK)
+    async googleLogin(@Body() dto: GoogleLoginDto) {
+        return this.authService.loginWithGoogle(dto);
     }
 
     /**

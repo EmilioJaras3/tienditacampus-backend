@@ -9,6 +9,7 @@ import { UsersService } from '../users/users.service';
 import { AuditService } from '../audit/audit.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
+import { GoogleLoginDto } from './dto/google-login.dto';
 
 /**
  * AuthService — Lógica de autenticación
@@ -153,6 +154,82 @@ export class AuthService {
             },
             accessToken,
         };
+    }
+
+    /**
+     * Iniciar sesión / Registro Automático usando Google OAuth2 SSO.
+     */
+    async loginWithGoogle(dto: GoogleLoginDto) {
+        try {
+            const response = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+                headers: { Authorization: `Bearer ${dto.token}` }
+            });
+
+            if (!response.ok) {
+                throw new UnauthorizedException('Token de Google inválido o expirado');
+            }
+
+            const data = await response.json();
+            const email = data.email.toLowerCase();
+
+            let user = await this.usersService.findByEmail(email);
+
+            if (!user) {
+                // Auto-registro (SSO) silently
+                // El dto de UsersService exige constraseña estricta, enviamos una aleatoria muy fuerte
+                const randomPassword = `Gg#${Math.random().toString(36).slice(-8)}A1!x`;
+                await this.usersService.create({
+                    email: email,
+                    password: randomPassword,
+                    firstName: data.given_name || 'Usuario',
+                    lastName: data.family_name || 'Google',
+                    role: 'buyer' // Rol por defecto, un admin lo puede subir a 'seller'
+                });
+                user = await this.usersService.findByEmail(email); // Cargar datos completos
+            }
+
+            if (!user) {
+                throw new Error('Fallo crítico al auto-registrar usuario con Google SSO');
+            }
+
+            // Ya sea nuevo o existente, registramos el login exitoso
+            await this.usersService.recordSuccessfulLogin(user.id);
+
+            const payload = { sub: user.id, email: user.email, role: user.role };
+            const accessToken = this.jwtService.sign(payload);
+
+            await this.auditService.log({
+                action: 'user.login_google',
+                entityType: 'user',
+                entityId: user.id,
+                userId: user.id,
+                description: `Login SSO exitoso (Google): ${user.email}`,
+                metadata: {
+                    email: user.email,
+                    role: user.role,
+                    provider: 'google',
+                    timestamp: new Date().toISOString(),
+                },
+            });
+
+            return {
+                user: {
+                    id: user.id,
+                    email: user.email,
+                    firstName: user.firstName,
+                    lastName: user.lastName,
+                    role: user.role,
+                    lastLoginAt: new Date().toISOString(),
+                    loginCount: user.loginCount + 1,
+                },
+                accessToken,
+            };
+
+        } catch (error) {
+            console.error('SSO Google Error:', error);
+            if (error instanceof UnauthorizedException) throw error;
+            throw new UnauthorizedException('Fallo al validar credenciales con servidor de Google');
+        }
     }
 
     /**

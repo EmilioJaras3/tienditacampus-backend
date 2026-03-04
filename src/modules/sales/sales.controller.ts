@@ -55,6 +55,15 @@ export class SalesController {
         return this.salesService.getHistory(req.user as User);
     }
 
+    @Get('analytics/by-weekday')
+    getByWeekdayAnalytics(
+        @Req() req: any,
+        @Query('startDate') startDate?: string,
+        @Query('endDate') endDate?: string,
+    ) {
+        return this.salesService.getByWeekdayAnalytics(req.user as User, startDate, endDate);
+    }
+
     @Get('prediction')
     getPrediction(@Req() req: any) {
         return this.salesService.getPrediction(req.user as User);

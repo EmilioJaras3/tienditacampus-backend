@@ -169,7 +169,6 @@ export class SalesService {
                 detail.quantityPrepared = item.quantityPrepared;
                 detail.unitCost = product.unitCost;
                 detail.unitPrice = product.salePrice;
-                detail.subtotal = item.quantityPrepared * Number(product.salePrice);
 
                 totalInvestment += Number(product.unitCost) * item.quantityPrepared;
                 details.push(detail);
@@ -306,5 +305,55 @@ export class SalesService {
             order: { saleDate: 'ASC' },
             take: 30 // Last 30 days
         });
+    }
+
+    async getByWeekdayAnalytics(user: User, startDate?: string, endDate?: string) {
+        const params: Array<string> = [user.id];
+        let where = 'WHERE ds.seller_id = $1';
+
+        if (startDate) {
+            params.push(startDate);
+            where += ` AND ds.sale_date >= $${params.length}`;
+        }
+
+        if (endDate) {
+            params.push(endDate);
+            where += ` AND ds.sale_date <= $${params.length}`;
+        }
+
+        const rows = await this.dailySaleRepository.query(
+            `
+            SELECT
+                EXTRACT(DOW FROM ds.sale_date)::int AS weekday,
+                COUNT(*)::int AS days_count,
+                COALESCE(SUM(ds.total_revenue), 0)::numeric(12,2) AS revenue_sum,
+                COALESCE(SUM(ds.units_sold), 0)::int AS units_sold_sum,
+                COALESCE(AVG(ds.total_revenue), 0)::numeric(12,2) AS revenue_avg
+            FROM daily_sales ds
+            ${where}
+            GROUP BY EXTRACT(DOW FROM ds.sale_date)
+            ORDER BY weekday ASC
+            `,
+            params,
+        );
+
+        const weekdayName: Record<number, string> = {
+            0: 'domingo',
+            1: 'lunes',
+            2: 'martes',
+            3: 'miercoles',
+            4: 'jueves',
+            5: 'viernes',
+            6: 'sabado',
+        };
+
+        return rows.map((row: any) => ({
+            weekday: Number(row.weekday),
+            weekdayName: weekdayName[Number(row.weekday)] ?? 'desconocido',
+            daysCount: Number(row.days_count),
+            revenueSum: row.revenue_sum,
+            unitsSoldSum: Number(row.units_sold_sum),
+            revenueAvg: row.revenue_avg,
+        }));
     }
 }

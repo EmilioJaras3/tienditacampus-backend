@@ -32,6 +32,15 @@ export class ProductsController {
     }
 
     /**
+     * GET /products/marketplace/:id
+     * Endpoint público para ver el detalle de un producto específico.
+     */
+    @Get('marketplace/:id')
+    findOneMarketplace(@Param('id') id: string) {
+        return this.productsService.findOneMarketplace(id);
+    }
+
+    /**
      * POST /products — Solo vendedores y admins pueden crear productos.
      */
     @Post()

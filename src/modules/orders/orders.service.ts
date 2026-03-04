@@ -18,9 +18,10 @@ export class OrdersService {
     ) { }
 
     async createOrder(dto: CreateOrderDto, buyer: User): Promise<Order> {
-        if (buyer.id === dto.sellerId) {
-            throw new BadRequestException('Un vendedor no puede comprar sus propios productos en esta transacción');
-        }
+        // PERMITIMOS COMPRAR PROPIOS PRODUCTOS PARA FACILITAR DEMOSTRACIONES Y PRUEBAS
+        // if (buyer.id === dto.sellerId) {
+        //     throw new BadRequestException('Un vendedor no puede comprar sus propios productos en esta transacción');
+        // }
 
         const queryRunner = this.dataSource.createQueryRunner();
         await queryRunner.connect();
@@ -133,7 +134,7 @@ export class OrdersService {
                 await queryRunner.manager.save(InventoryRecord, activeInventory);
             }
 
-            order.status = 'pending'; // Aceptado, listo para entregar
+            order.status = 'accepted'; // Aceptado, listo para entregar
             await queryRunner.manager.save(Order, order);
             await queryRunner.commitTransaction();
             return order;
@@ -166,7 +167,7 @@ export class OrdersService {
             throw new NotFoundException('Orden no encontrada');
         }
 
-        if (order.status !== 'pending') {
+        if (order.status !== 'pending' && order.status !== 'accepted') {
             throw new BadRequestException('Esta orden ya fue procesada o cancelada');
         }
 
@@ -204,22 +205,29 @@ export class OrdersService {
 
             for (const orderItem of order.items) {
                 let saleDetail = dailySale.details.find(d => d.productId === orderItem.productId);
+                let isNewDetail = false;
 
                 if (!saleDetail) {
                     saleDetail = new SaleDetail();
                     saleDetail.dailySaleId = dailySale.id;
+                    saleDetail.dailySale = dailySale; // Relación explícita
                     saleDetail.productId = orderItem.productId;
                     saleDetail.quantityPrepared = 0;
                     saleDetail.quantitySold = 0;
                     saleDetail.quantityLost = 0;
                     saleDetail.unitCost = await this.getUnitCost(queryRunner, orderItem.productId);
                     saleDetail.unitPrice = orderItem.unitPrice;
-                    saleDetail.subtotal = 0;
+                    isNewDetail = true;
                 }
 
                 saleDetail.quantitySold += orderItem.quantity;
-                saleDetail.subtotal = saleDetail.quantitySold * Number(saleDetail.unitPrice);
-                await queryRunner.manager.save(SaleDetail, saleDetail);
+
+                // Add to array if new so cascade handles it, else save directly
+                if (isNewDetail) {
+                    dailySale.details.push(saleDetail);
+                } else {
+                    await queryRunner.manager.save(SaleDetail, saleDetail);
+                }
             }
 
             // Recalculate DailySale Aggregates

@@ -4,6 +4,14 @@ import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module';
 import * as express from 'express';
 
+function getAllowedOrigins(configService: ConfigService): string[] {
+    const frontendUrl = configService.get<string>('FRONTEND_URL', 'http://localhost');
+    return frontendUrl
+        .split(',')
+        .map((origin) => origin.trim())
+        .filter(Boolean);
+}
+
 async function bootstrap() {
     const app = await NestFactory.create(AppModule);
 
@@ -24,24 +32,29 @@ async function bootstrap() {
         }),
     );
 
+    const allowedOrigins = getAllowedOrigins(configService);
+
     // CORS
     app.enableCors({
-        origin: [
-            configService.get<string>('FRONTEND_URL', 'http://localhost:3000'),
-            'http://localhost:8080',
-            'http://127.0.0.1:8080',
-            'http://localhost:3000',
-        ],
+        origin: (origin, callback) => {
+            if (!origin || allowedOrigins.includes(origin)) {
+                callback(null, true);
+                return;
+            }
+            callback(new Error(`CORS blocked for origin: ${origin}`));
+        },
         credentials: true,
-        methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-        allowedHeaders: 'Content-Type, Accept, Authorization',
+        methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+        allowedHeaders: ['Content-Type', 'Authorization'],
+        preflightContinue: false,
+        optionsSuccessStatus: 204,
     });
 
     const port = configService.get<number>('BACKEND_PORT', 3001);
     await app.listen(port);
 
-    console.log(`🚀 TienditaCampus API running on port ${port}`);
-    console.log(`📡 Environment: ${configService.get<string>('NODE_ENV', 'development')}`);
+    console.log(`TienditaCampus API running on port ${port}`);
+    console.log(`Environment: ${configService.get<string>('NODE_ENV', 'development')}`);
 }
 
 bootstrap();

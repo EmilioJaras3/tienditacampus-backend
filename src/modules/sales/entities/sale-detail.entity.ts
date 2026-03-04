@@ -43,7 +43,15 @@ export class SaleDetail {
     @Column({ type: 'decimal', precision: 10, scale: 2, name: 'unit_price' })
     unitPrice: number;
 
-    @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
+    @Column({
+        type: 'decimal',
+        precision: 10,
+        scale: 2,
+        generatedType: 'STORED',
+        asExpression: 'quantity_sold * unit_price',
+        insert: false,
+        update: false,
+    })
     subtotal: number;
 
     @CreateDateColumn({ type: 'timestamptz', name: 'created_at' })

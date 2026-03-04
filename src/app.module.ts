@@ -14,9 +14,11 @@ import { SalesModule } from './modules/sales/sales.module';
 import { InventoryModule } from './modules/inventory/inventory.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { BenchmarkingModule } from './modules/benchmarking/benchmarking.module';
-// import { ReportsModule } from './modules/reports/reports.module';
+import { ReportsModule } from './modules/reports/reports.module';
 import { HealthController } from './common/controllers/health.controller';
 import { OrdersModule } from './modules/orders/orders.module';
+import { BreakEvenModule } from './modules/break-even/break-even.module';
+import { DashboardModule } from './modules/dashboard/dashboard.module';
 
 @Module({
     imports: [
@@ -53,9 +55,9 @@ import { OrdersModule } from './modules/orders/orders.module';
         AuditModule,
         OrdersModule,
         BenchmarkingModule,
-
-        // Módulos (descomentar conforme se implementen)
-        // ReportsModule,
+        ReportsModule,
+        BreakEvenModule,
+        DashboardModule,
     ],
     controllers: [HealthController],
 })

@@ -11,6 +11,7 @@ export const validationSchema = Joi.object({
         .default('development'),
 
     BACKEND_PORT: Joi.number().default(3001),
+    FRONTEND_URL: Joi.string().default('http://localhost'),
 
     // Database — requeridas
     POSTGRES_HOST: Joi.string().required(),

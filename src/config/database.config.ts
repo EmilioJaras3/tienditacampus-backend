@@ -16,7 +16,7 @@ export const databaseConfig = (
     username: configService.get<string>('POSTGRES_USER'),
     password: configService.get<string>('POSTGRES_PASSWORD'),
     autoLoadEntities: true,
-    synchronize: configService.get<string>('NODE_ENV') === 'development',
+    synchronize: false,
     logging: configService.get<string>('NODE_ENV') === 'development',
     ssl: configService.get<string>('NODE_ENV') === 'production'
         ? { rejectUnauthorized: false }
