@@ -4,6 +4,7 @@ import {
     ForbiddenException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 import { verify } from '@node-rs/argon2';
 import { UsersService } from '../users/users.service';
 import { AuditService } from '../audit/audit.service';
@@ -27,6 +28,7 @@ export class AuthService {
         private readonly usersService: UsersService,
         private readonly jwtService: JwtService,
         private readonly auditService: AuditService,
+        private readonly configService: ConfigService,
     ) { }
 
     /**
@@ -161,13 +163,11 @@ export class AuthService {
      */
     async loginWithGoogle(dto: GoogleLoginDto) {
         try {
-            const response = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+            const userInfoUrl = this.configService.get<string>('google.userInfoUrl'); // Verificación con Google
+            const response = await fetch(userInfoUrl, {
                 headers: { Authorization: `Bearer ${dto.token}` }
             });
-
-            if (!response.ok) {
-                throw new UnauthorizedException('Token de Google inválido o expirado');
-            }
+            if (!response.ok) throw new UnauthorizedException('Token de Google inválido');
 
             const data = await response.json();
             const email = data.email.toLowerCase();

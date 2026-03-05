@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { MongooseModule } from '@nestjs/mongoose';
+import { ScheduleModule } from '@nestjs/schedule';
 import { configuration } from './config/configuration';
 import { validationSchema } from './config/validation.schema';
 import { databaseConfig } from './config/database.config';
@@ -19,6 +20,7 @@ import { HealthController } from './common/controllers/health.controller';
 import { OrdersModule } from './modules/orders/orders.module';
 import { BreakEvenModule } from './modules/break-even/break-even.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
+import { ForecastModule } from './modules/forecast/forecast.module';
 
 @Module({
     imports: [
@@ -29,13 +31,16 @@ import { DashboardModule } from './modules/dashboard/dashboard.module';
             validationSchema,
         }),
 
-        // ── Base de datos RELACIONAL (PostgreSQL) ────────────
+        // ── Tareas Programadas (Cron Jobs) ────────────
+        ScheduleModule.forRoot(),
+
+        // Base de datos RELACIONAL
         TypeOrmModule.forRootAsync({
             inject: [ConfigService],
             useFactory: databaseConfig,
         }),
 
-        // ── Base de datos NO RELACIONAL (MongoDB) ────────────
+        // Base de datos NO RELACIONAL
         MongooseModule.forRootAsync({
             inject: [ConfigService],
             useFactory: (configService: ConfigService) => ({
@@ -58,6 +63,7 @@ import { DashboardModule } from './modules/dashboard/dashboard.module';
         ReportsModule,
         BreakEvenModule,
         DashboardModule,
+        ForecastModule,
     ],
     controllers: [HealthController],
 })

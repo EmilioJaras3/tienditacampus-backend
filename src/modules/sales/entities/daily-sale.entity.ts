@@ -53,6 +53,26 @@ export class DailySale {
     @Column({ type: 'int', default: 0, name: 'units_lost' })
     unitsLost: number;
 
+    @Column({
+        type: 'decimal',
+        precision: 10,
+        scale: 2,
+        nullable: true,
+        name: 'break_even_units',
+        comment: 'Unidades mínimas necesarias para cubrir inversión del día'
+    })
+    breakEvenUnits: number | null;
+
+    @Column({
+        type: 'decimal',
+        precision: 10,
+        scale: 2,
+        default: 0,
+        name: 'total_waste_cost',
+        comment: 'Costo económico total de merma del día (suma de waste_cost de detalles)'
+    })
+    totalWasteCost: number;
+
     @Column({ type: 'boolean', default: false, name: 'is_closed' })
     isClosed: boolean;
 

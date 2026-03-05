@@ -1,6 +1,7 @@
 import {
     Entity,
-    PrimaryGeneratedColumn,
+    PrimaryColumn,
+    Generated,
     Column,
     CreateDateColumn,
     UpdateDateColumn,
@@ -14,9 +15,10 @@ import { Exclude } from 'class-transformer';
  * El campo password_hash se excluye automáticamente de las responses
  * gracias al decorador @Exclude() + ClassSerializerInterceptor.
  */
-@Entity('users')
+@Entity('users', { synchronize: false })
 export class User {
-    @PrimaryGeneratedColumn('uuid')
+    @PrimaryColumn('uuid')
+    @Generated('uuid')
     id: string;
 
     @Column({ type: 'varchar', length: 255, unique: true })
@@ -46,6 +48,7 @@ export class User {
 
     @Column({
         type: 'enum',
+        enumName: 'user_role',
         enum: ['admin', 'seller', 'buyer'],
         default: 'seller',
     })
@@ -87,10 +90,20 @@ export class User {
     passwordChangedAt: Date | null;
 
     // ── Auditoría ─────────────────────────────────────────
-    @CreateDateColumn({ type: 'timestamptz', name: 'created_at' })
+    @CreateDateColumn({
+        type: 'timestamptz',
+        name: 'created_at',
+        insert: false,
+        update: false
+    })
     createdAt: Date;
 
-    @UpdateDateColumn({ type: 'timestamptz', name: 'updated_at' })
+    @UpdateDateColumn({
+        type: 'timestamptz',
+        name: 'updated_at',
+        insert: false,
+        update: false
+    })
     updatedAt: Date;
 
     // ── Helpers ───────────────────────────────────────────

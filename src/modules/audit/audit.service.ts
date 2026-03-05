@@ -30,7 +30,7 @@ export class AuditService {
         entityId?: string;
         userId?: string;
         metadata?: Record<string, any>;
-        level?: 'info' | 'warn' | 'error' | 'debug';
+        level?: 'info' | 'warn' | 'error' | 'debug' | 'critical';
         description?: string;
         ipAddress?: string;
     }): Promise<AuditLog> {

@@ -37,6 +37,25 @@ export class SaleDetail {
     @Column({ type: 'int', default: 0, name: 'quantity_lost' })
     quantityLost: number;
 
+    @Column({
+        type: 'enum',
+        enum: ['expired', 'damaged', 'other'],
+        nullable: true,
+        name: 'waste_reason',
+        comment: 'Causalidad de la merma: vencimiento, daño físico u otro',
+    })
+    wasteReason: 'expired' | 'damaged' | 'other' | null;
+
+    @Column({
+        type: 'decimal',
+        precision: 10,
+        scale: 2,
+        default: 0,
+        name: 'waste_cost',
+        comment: 'Costo económico real de la merma (quantity_lost * unit_cost)',
+    })
+    wasteCost: number;
+
     @Column({ type: 'decimal', precision: 10, scale: 2, name: 'unit_cost' })
     unitCost: number;
 

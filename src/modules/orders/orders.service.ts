@@ -230,28 +230,39 @@ export class OrdersService {
                 }
             }
 
-            // Recalculate DailySale Aggregates
-            const allDetails = await queryRunner.manager.find(SaleDetail, { where: { dailySaleId: dailySale.id } });
-
+            // Recalculate DailySale Aggregates from memory to include newly pushed details
             let totalRevenue = 0;
             let unitsSold = 0;
             let totalInvestment = 0;
+            let totalWasteCost = 0;
 
-            for (const d of allDetails) {
+            for (const d of dailySale.details) {
                 totalRevenue += Number(d.unitPrice) * d.quantitySold;
                 unitsSold += d.quantitySold;
                 const investmentContrib = d.quantityPrepared > 0 ? d.quantityPrepared : d.quantitySold;
                 totalInvestment += Number(d.unitCost) * investmentContrib;
+                totalWasteCost += Number(d.wasteCost || 0);
             }
 
             dailySale.totalRevenue = totalRevenue;
             dailySale.totalInvestment = totalInvestment;
             dailySale.unitsSold = unitsSold;
+            dailySale.totalWasteCost = totalWasteCost;
 
             const profit = totalRevenue - totalInvestment;
             dailySale.profitMargin = totalRevenue > 0 ? (profit / totalRevenue) * 100 : 0;
 
+            // Save the daily sale to handle cascade inserts of details
             await queryRunner.manager.save(DailySale, dailySale);
+
+            // Force explicit update of the aggregates to bypass TypeORM diffing bugs
+            await queryRunner.manager.update(DailySale, dailySale.id, {
+                totalRevenue: dailySale.totalRevenue,
+                totalInvestment: dailySale.totalInvestment,
+                unitsSold: dailySale.unitsSold,
+                totalWasteCost: dailySale.totalWasteCost,
+                profitMargin: dailySale.profitMargin
+            });
 
             await queryRunner.commitTransaction();
 

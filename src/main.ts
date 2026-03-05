@@ -5,7 +5,7 @@ import { AppModule } from './app.module';
 import * as express from 'express';
 
 function getAllowedOrigins(configService: ConfigService): string[] {
-    const frontendUrl = configService.get<string>('FRONTEND_URL', 'http://localhost');
+    const frontendUrl = configService.get<string>('frontendUrl');
     return frontendUrl
         .split(',')
         .map((origin) => origin.trim())
@@ -15,15 +15,15 @@ function getAllowedOrigins(configService: ConfigService): string[] {
 async function bootstrap() {
     const app = await NestFactory.create(AppModule);
 
-    // Aumentar el límite de tamaño para JSON (Base64 images)
+    // Limite para imágenes Base64
     app.use(express.json({ limit: '10mb' }));
     app.use(express.urlencoded({ limit: '10mb', extended: true }));
     const configService = app.get(ConfigService);
 
-    // Prefijo global para la API
+    // Prefijo de API
     app.setGlobalPrefix('api');
 
-    // Validación global de DTOs
+    // Validación de DTOs
     app.useGlobalPipes(
         new ValidationPipe({
             whitelist: true,

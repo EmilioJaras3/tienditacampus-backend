@@ -21,12 +21,12 @@ export class SalesService {
         private readonly dataSource: DataSource,
     ) { }
 
-    // ── HU-03: Sugerencia Estadística (IQR) ─────────────────────
+    // Predicción de ventas basada en IQR
     async getPrediction(user: User): Promise<any> {
-        // 1. Get current day of week (0=Sunday, 1=Monday...)
-        const today = new Date().getDay(); // JS getDay() returns 0-6
+        // Obtenemos el día de la semana actual (0-6)
+        const today = new Date().getDay();
 
-        // 2. Find historical sales for this user on this day of week
+        // Ventas históricas para este usuario y día
         const history = await this.dailySaleRepository.query(`
             SELECT 
                 sd.product_id, 
@@ -42,7 +42,7 @@ export class SalesService {
             LIMIT 100
         `, [user.id, today]);
 
-        // Group by product
+        // Agrupación por producto
         const productSales: Record<string, number[]> = {};
         const productNames: Record<string, string> = {};
 
@@ -54,7 +54,7 @@ export class SalesService {
             productSales[row.product_id].push(Number(row.quantity_sold));
         });
 
-        // Calculate stats
+        // Cálculo de estadísticas
         const suggestions = Object.keys(productSales).map(productId => {
             const sales = productSales[productId];
             if (sales.length < 3) return null; // Not enough data
@@ -78,11 +78,11 @@ export class SalesService {
             };
         }).filter(x => x !== null);
 
-        // Return top suggestion (simplied for widget)
+        // Retornar sugerencia principal
         return suggestions.length > 0 ? suggestions[0] : null;
     }
 
-    // ── HU-04: Cierre de Día ─────────────────────────────
+    // Cierre de jornada
     async closeDay(user: User, wastes: { productId: string; waste: number }[]) {
         const dailySale = await this.findToday(user);
         if (!dailySale) throw new NotFoundException('No hay venta abierta hoy');
@@ -128,22 +128,18 @@ export class SalesService {
         return this.recalculateHeader(dailySale.id);
     }
 
-    /**
-     * Finds today's active sales record for the user.
-     */
+    // Busca el registro de ventas de hoy para el usuario
     async findToday(user: User): Promise<DailySale | null> {
         return await this.dailySaleRepository.findOne({
             where: {
                 sellerId: user.id,
-                saleDate: new Date().toISOString().split('T')[0], // YYYY-MM-DD
+                saleDate: new Date().toISOString().split('T')[0],
             },
             relations: ['details', 'details.product'],
         });
     }
 
-    /**
-     * Initializes a new daily sale record with prepared items.
-     */
+    // Inicializa un nuevo registro de ventas diarias
     async prepareDay(prepareDto: PrepareDailySaleDto, user: User): Promise<DailySale> {
         const existing = await this.findToday(user);
         if (existing) {
@@ -208,9 +204,7 @@ export class SalesService {
         }
     }
 
-    /**
-     * Updates sold/lost quantities for a specific product in today's sale.
-     */
+    // Actualiza cantidades vendidas/perdidas para un producto
     async trackProduct(trackDto: TrackSaleDto, user: User): Promise<DailySale> {
         const dailySale = await this.findToday(user);
         if (!dailySale) {
@@ -249,25 +243,35 @@ export class SalesService {
         let totalRevenue = 0;
         let unitsSold = 0;
         let unitsLost = 0;
+        let totalWasteCost = 0;
 
         for (const detail of sale.details) {
             totalRevenue += Number(detail.unitPrice) * detail.quantitySold;
             unitsSold += detail.quantitySold;
             unitsLost += detail.quantityLost;
+            totalWasteCost += Number(detail.wasteCost || 0); // Include generated column if available
         }
 
         sale.totalRevenue = totalRevenue;
         sale.unitsSold = unitsSold;
         sale.unitsLost = unitsLost;
+        sale.totalWasteCost = totalWasteCost;
 
         // Profit & Margin
         const profit = totalRevenue - Number(sale.totalInvestment);
         sale.profitMargin = totalRevenue > 0 ? (profit / totalRevenue) * 100 : 0;
 
-        // Note: totalProfit is generated column in DB, but we do not write to it. 
-        // If it was a real column we would set it here.
+        await this.dailySaleRepository.save(sale);
 
-        return await this.dailySaleRepository.save(sale);
+        await this.dailySaleRepository.update(sale.id, {
+            totalRevenue: sale.totalRevenue,
+            unitsSold: sale.unitsSold,
+            unitsLost: sale.unitsLost,
+            totalWasteCost: sale.totalWasteCost,
+            profitMargin: sale.profitMargin
+        });
+
+        return sale;
     }
 
     async getROI(user: User, startDate?: string, endDate?: string) {

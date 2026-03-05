@@ -1,10 +1,12 @@
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
 import { BigQuery } from '@google-cloud/bigquery';
 import { OAuth2Client } from 'google-auth-library';
 import { Project } from './entities/project.entity';
 import { Query } from './entities/query.entity';
+import { BenchmarkingQueries } from './benchmarking.queries';
 
 @Injectable()
 export class BenchmarkingService {
@@ -17,6 +19,7 @@ export class BenchmarkingService {
         private readonly projectRepository: Repository<Project>,
         @InjectRepository(Query)
         private readonly queryRepository: Repository<Query>,
+        private readonly configService: ConfigService,
     ) { }
 
     /**
@@ -58,7 +61,7 @@ export class BenchmarkingService {
         if (!accessToken) throw new BadRequestException('OAuth token is required');
 
         // 1. Obtener datos desde la VISTA v_daily_export (Requerimiento del profesor)
-        const metrics = await this.entityManager.query('SELECT * FROM v_daily_export');
+        const metrics = await this.entityManager.query(BenchmarkingQueries.DAILY_EXPORT);
 
         if (metrics.length === 0) {
             throw new BadRequestException('No hay métricas acumuladas (calls > 0) para exportar.');
@@ -70,12 +73,12 @@ export class BenchmarkingService {
             oauth2Client.setCredentials({ access_token: accessToken });
 
             const bigquery = new BigQuery({
-                projectId: 'data-from-software',
+                projectId: this.configService.get<string>('bigquery.projectId'),
                 authClient: oauth2Client
             });
 
-            const datasetId = 'benchmarking_warehouse';
-            const tableId = 'daily_query_metrics';
+            const datasetId = this.configService.get<string>('bigquery.datasetId');
+            const tableId = this.configService.get<string>('bigquery.tableId');
 
             // Insertar rows directamente
             const rows = metrics.map((m: any) => ({
@@ -86,7 +89,7 @@ export class BenchmarkingService {
             await bigquery.dataset(datasetId).table(tableId).insert(rows);
 
             // 3. Solo si el envío es exitoso, reiniciar estadísticas (Requerimiento del profesor)
-            await this.entityManager.query('SELECT pg_stat_statements_reset()');
+            await this.entityManager.query(BenchmarkingQueries.RESET_STATEMENTS);
 
             return {
                 message: 'Snapshot enviado exitosamente a BigQuery y estadísticas reiniciadas.',
@@ -103,22 +106,10 @@ export class BenchmarkingService {
      */
     async getQueryMetrics(limit = 20): Promise<any[]> {
         try {
-            const metrics = await this.entityManager.query(`
-                SELECT 
-                    queryid::text as id,
-                    LEFT(query, 120) as query,
-                    calls,
-                    ROUND(total_exec_time::numeric, 2) as total_time_ms,
-                    ROUND(mean_exec_time::numeric, 2) as avg_time_ms,
-                    rows as rows_returned,
-                    shared_blks_hit,
-                    shared_blks_read
-                FROM pg_stat_statements
-                WHERE calls > 0
-                AND query NOT LIKE '%pg_stat_statements%'
-                ORDER BY calls DESC
-                LIMIT $1
-            `, [limit]);
+            const metrics = await this.entityManager.query(
+                BenchmarkingQueries.QUERY_METRICS,
+                [limit]
+            );
             return metrics;
         } catch (error) {
             this.logger.warn(`pg_stat_statements no disponible: ${error.message}`);

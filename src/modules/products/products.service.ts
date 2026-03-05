@@ -36,7 +36,7 @@ export class ProductsService {
         return entities.map((entity, index) => {
             return {
                 ...entity,
-                stock: parseInt(raw[index].totalStock, 10), // We will attach this virtual property
+                stock: parseInt(raw[index].totalStock, 10), // Asignamos stock virtual
             } as unknown as Product;
         });
     }
@@ -96,14 +96,14 @@ export class ProductsService {
     }
 
     async update(id: string, updateProductDto: UpdateProductDto, user: User): Promise<Product> {
-        const product = await this.findOne(id, user); // Ensure ownership exists
+        const product = await this.findOne(id, user); // Verificamos propiedad
         Object.assign(product, updateProductDto);
         return await this.productRepository.save(product);
     }
 
     async remove(id: string, user: User): Promise<void> {
         const product = await this.findOne(id, user);
-        product.isActive = false; // Soft delete
+        product.isActive = false; // Borrado lógico
         await this.productRepository.save(product);
     }
 }

@@ -22,19 +22,14 @@ export class UsersService {
         private readonly configService: ConfigService,
     ) { }
 
-    /**
-     * Busca un usuario activo por email.
-     * Incluye password_hash para verificación en auth.
-     */
+    // Busca usuario activo por email
     async findByEmail(email: string): Promise<User | null> {
         return this.usersRepository.findOne({
             where: { email: email.toLowerCase(), isActive: true },
         });
     }
 
-    /**
-     * Busca un usuario por ID.
-     */
+    // Busca usuario por ID
     async findById(id: string): Promise<User | null> {
         return this.usersRepository.findOne({
             where: { id, isActive: true },
@@ -55,12 +50,7 @@ export class UsersService {
         const products = await this.productRepository.createQueryBuilder('product')
             .where('product.seller_id = :sellerId', { sellerId: id })
             .andWhere('product.isActive = :isActive', { isActive: true })
-            .andWhere(`EXISTS (
-                SELECT 1 FROM inventory_records inventory 
-                WHERE inventory.product_id = product.id 
-                AND inventory.quantity_remaining > 0 
                 AND inventory.status = 'active'
-            )`)
             .getMany();
 
         return {
@@ -69,9 +59,7 @@ export class UsersService {
         };
     }
 
-    /**
-     * Crea un nuevo usuario con contraseña hasheada con Argon2.
-     */
+    // Crea usuario con contraseña Argon2
     async create(dto: CreateUserDto): Promise<User> {
         // Verificar que el email no exista
         const existing = await this.usersRepository.findOne({
@@ -102,9 +90,7 @@ export class UsersService {
         return this.usersRepository.save(user) as Promise<User>;
     }
 
-    /**
-     * Actualiza datos del perfil (sin email ni contraseña).
-     */
+    // Actualiza perfil (sin email/password)
     async update(id: string, dto: UpdateUserDto): Promise<User> {
         const user = await this.findById(id);
         if (!user) {
@@ -115,12 +101,9 @@ export class UsersService {
         return this.usersRepository.save(user);
     }
 
-    // ── Trazabilidad UX ───────────────────────────────────
+    // Trazabilidad de logins
 
-    /**
-     * Registra un login exitoso: incrementa login_count,
-     * actualiza last_login_at, resetea intentos fallidos.
-     */
+    // Registra login exitoso y resetea intentos
     async recordSuccessfulLogin(id: string): Promise<void> {
         await this.usersRepository.update(id, {
             lastLoginAt: new Date(),
@@ -130,10 +113,7 @@ export class UsersService {
         } as any);
     }
 
-    /**
-     * Registra un intento de login fallido.
-     * Bloquea la cuenta si supera el umbral configurado.
-     */
+    // Registra fallo y bloquea si es necesario
     async recordFailedLogin(id: string): Promise<void> {
         const user = await this.findById(id);
         if (!user) return;

@@ -7,6 +7,7 @@
 export const configuration = () => ({
     nodeEnv: process.env.NODE_ENV || 'development',
     port: parseInt(process.env.BACKEND_PORT ?? '3001', 10),
+    frontendUrl: process.env.FRONTEND_URL || 'http://localhost:3000',
 
     database: {
         host: process.env.POSTGRES_HOST || 'localhost',
@@ -30,5 +31,15 @@ export const configuration = () => ({
     security: {
         maxFailedLoginAttempts: parseInt(process.env.MAX_FAILED_LOGIN_ATTEMPTS ?? '5', 10),
         lockoutDurationMinutes: parseInt(process.env.LOCKOUT_DURATION_MINUTES ?? '15', 10),
+    },
+
+    bigquery: {
+        projectId: process.env.BIGQUERY_PROJECT_ID || 'data-from-software',
+        datasetId: process.env.BIGQUERY_DATASET_ID || 'benchmarking_warehouse',
+        tableId: process.env.BIGQUERY_TABLE_ID || 'daily_query_metrics',
+    },
+
+    google: {
+        userInfoUrl: process.env.GOOGLE_USER_INFO_URL || 'https://www.googleapis.com/oauth2/v3/userinfo',
     },
 });
