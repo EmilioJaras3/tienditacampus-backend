@@ -15,15 +15,15 @@ function getAllowedOrigins(configService: ConfigService): string[] {
 async function bootstrap() {
     const app = await NestFactory.create(AppModule);
 
-    // Limite para imágenes Base64
+    // Límite imágenes Base64.
     app.use(express.json({ limit: '10mb' }));
     app.use(express.urlencoded({ limit: '10mb', extended: true }));
     const configService = app.get(ConfigService);
 
-    // Prefijo de API
+    // Prefijo API.
     app.setGlobalPrefix('api');
 
-    // Validación de DTOs
+    // Validación DTOs.
     app.useGlobalPipes(
         new ValidationPipe({
             whitelist: true,
@@ -34,7 +34,7 @@ async function bootstrap() {
 
     const allowedOrigins = getAllowedOrigins(configService);
 
-    // CORS
+    // Configuración CORS.
     app.enableCors({
         origin: (origin, callback) => {
             if (!origin || allowedOrigins.includes(origin)) {
@@ -50,7 +50,7 @@ async function bootstrap() {
         optionsSuccessStatus: 204,
     });
 
-    const port = configService.get<number>('BACKEND_PORT', 3001);
+    const port = configService.get<number>('BACKEND_PORT');
     await app.listen(port);
 
     console.log(`TienditaCampus API running on port ${port}`);
