@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Headers, UnauthorizedException, BadRequestException, Query, Body, Res, Logger, UseGuards } from '@nestjs/common';
+import { Controller, Post, Get, Headers, UnauthorizedException, BadRequestException, Query, Body, Res, Logger, UseGuards, Param } from '@nestjs/common';
 import { Response } from 'express';
 import { BenchmarkingService } from './benchmarking.service';
 import { OAuthBigQueryService } from './auth/oauth-bigquery.service';
@@ -93,7 +93,7 @@ export class BenchmarkingController {
     // --- Exportación ---
 
     @Get('snapshots/export/:projectId')
-    async exportCSV(@Query('projectId') projectId: number, @Res() res: Response) {
+    async exportCSV(@Param('projectId') projectId: number, @Res() res: Response) {
         const csv = await this.snapshotService.exportToCSV(projectId);
         const filename = `project_${projectId}_${new Date().toISOString().split('T')[0]}.csv`;
         res.setHeader('Content-Type', 'text/csv');
