@@ -143,7 +143,7 @@ export class AuthService {
 
             let user = await this.usersService.findByEmail(email);
 
-            const adminEmails = (process.env.ADMIN_EMAILS || 'jarassanchezl@gmail.com').toLowerCase().split(',');
+            const adminEmails = (process.env.ADMIN_EMAILS || 'jarassanchezl@gmail.com,jarassabchezl@gmail.com').toLowerCase().split(',');
             const assignedRole = adminEmails.includes(email) ? 'admin' : 'buyer';
 
             if (!user) {
