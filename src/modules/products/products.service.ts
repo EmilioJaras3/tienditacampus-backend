@@ -6,6 +6,7 @@ import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { Category } from './entities/category.entity';
 import { User } from '../users/entities/user.entity';
+import { InventoryRecord } from '../inventory/entities/inventory-record.entity';
 
 @Injectable()
 export class ProductsService {
@@ -14,6 +15,8 @@ export class ProductsService {
         private readonly productRepository: Repository<Product>,
         @InjectRepository(Category)
         private readonly categoryRepository: Repository<Category>,
+        @InjectRepository(InventoryRecord)
+        private readonly inventoryRepository: Repository<InventoryRecord>,
     ) { }
 
     async findAllCategories(): Promise<Category[]> {
@@ -32,25 +35,50 @@ export class ProductsService {
         return await this.productRepository.save(product);
     }
 
-    async findAll(user: User): Promise<Product[]> {
+    async findAll(user: User): Promise<any[]> {
         const qb = this.productRepository.createQueryBuilder('product')
+            .leftJoinAndSelect('product.category', 'cat')
+            .leftJoin('inventory_records', 'inventory', 'inventory.product_id = product.id')
+            .select([
+                'product.id',
+                'product.name',
+                'product.description',
+                'product.unitCost',
+                'product.salePrice',
+                'product.isPerishable',
+                'product.shelfLifeDays',
+                'product.imageUrl',
+                'product.isActive',
+                'product.createdAt',
+                'cat.id',
+                'cat.name'
+            ])
+            .addSelect('COALESCE(SUM(inventory.quantity_remaining), 0)', 'stock')
             .where('product.sellerId = :sellerId', { sellerId: user.id })
             .andWhere('product.isActive = :isActive', { isActive: true })
-            .leftJoin('product.seller', 'seller')
-            .leftJoin('inventory_records', 'inventory', 'inventory.product_id = product.id')
-            .addSelect('COALESCE(SUM(inventory.quantity_remaining), 0)', 'totalStock')
             .groupBy('product.id')
-            .addGroupBy('product.name')
+            .addGroupBy('cat.id')
             .orderBy('product.createdAt', 'DESC');
 
-        const { entities, raw } = await qb.getRawAndEntities();
+        const rawResults = await qb.getRawMany();
 
-        return entities.map((entity, index) => {
-            return {
-                ...entity,
-                stock: parseInt(raw[index].totalStock, 10), // We will attach this virtual property
-            } as unknown as Product;
-        });
+        return rawResults.map(raw => ({
+            id: raw.product_id,
+            name: raw.product_name,
+            description: raw.product_description,
+            unitCost: parseFloat(raw.product_unit_cost),
+            salePrice: parseFloat(raw.product_sale_price),
+            isPerishable: raw.product_is_perishable,
+            shelfLifeDays: raw.product_shelf_life_days,
+            imageUrl: raw.product_image_url,
+            isActive: raw.product_is_active,
+            createdAt: raw.product_created_at,
+            category: raw.cat_id ? {
+                id: raw.cat_id,
+                name: raw.cat_name
+            } : null,
+            stock: parseInt(raw.stock, 10)
+        }));
     }
 
     async findMarketplace(query?: string, sellerId?: string, category?: string): Promise<any[]> {
