@@ -15,6 +15,7 @@ export const databaseConfig = (
         return {
             type: 'postgres',
             url,
+            autoLoadEntities: true,
             synchronize: configService.get<boolean>('POSTGRES_SYNCHRONIZE', false),
             logging: configService.get<string>('NODE_ENV') === 'development',
             ssl: { rejectUnauthorized: false },
