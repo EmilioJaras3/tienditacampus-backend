@@ -9,7 +9,7 @@ import { TypeOrmModuleOptions } from '@nestjs/typeorm';
 export const databaseConfig = (
     configService: ConfigService,
 ): TypeOrmModuleOptions => {
-    const url = configService.get<string>('DATABASE_URL');
+    const url = configService.get<string>('database.url') || process.env.DATABASE_URL;
 
     if (url) {
         return {
