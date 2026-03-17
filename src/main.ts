@@ -38,7 +38,7 @@ async function bootstrap() {
         optionsSuccessStatus: 204,
     });
 
-    const port = configService.get<number>('BACKEND_PORT', 3001);
+    const port = configService.get<number>('PORT') || configService.get<number>('BACKEND_PORT', 3001);
     await app.listen(port);
 
     console.log(`TienditaCampus API running on port ${port}`);
