@@ -21,18 +21,23 @@ export class AuditService {
         level?: 'info' | 'warn' | 'error' | 'debug';
         description?: string;
         ipAddress?: string;
-    }): Promise<AuditLog> {
-        const entry = new this.auditModel({
-            action: params.action,
-            entityType: params.entityType,
-            entityId: params.entityId,
-            userId: params.userId,
-            metadata: params.metadata || {},
-            level: params.level || 'info',
-            description: params.description,
-            ipAddress: params.ipAddress,
-        });
-        return entry.save();
+    }): Promise<AuditLog | null> {
+        try {
+            const entry = new this.auditModel({
+                action: params.action,
+                entityType: params.entityType,
+                entityId: params.entityId,
+                userId: params.userId,
+                metadata: params.metadata || {},
+                level: params.level || 'info',
+                description: params.description,
+                ipAddress: params.ipAddress,
+            });
+            return await entry.save();
+        } catch (error) {
+            console.error('Audit log failed (MongoDB not connected):', error.message);
+            return null;
+        }
     }
 
     async findByAction(action: string): Promise<AuditLog[]> {

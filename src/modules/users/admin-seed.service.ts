@@ -20,6 +20,7 @@ export class AdminSeedService implements OnModuleInit {
         const password = this.configService.get<string>('DEFAULT_ADMIN_PASSWORD');
 
         if (!emailRaw || !password) {
+            this.logger.warn('DEFAULT_ADMIN_EMAIL or DEFAULT_ADMIN_PASSWORD not set. Skipping seed.');
             return;
         }
 
