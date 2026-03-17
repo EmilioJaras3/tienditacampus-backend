@@ -18,7 +18,7 @@ export const databaseConfig = (
             autoLoadEntities: true,
             synchronize: false,
             logging: configService.get<string>('NODE_ENV') === 'development',
-            ssl: configService.get<boolean>('POSTGRES_SSL', true) ? { rejectUnauthorized: false } : false,
+            ssl: { rejectUnauthorized: false },
         };
     }
 
@@ -32,6 +32,6 @@ export const databaseConfig = (
         autoLoadEntities: true,
         synchronize: false,
         logging: configService.get<string>('NODE_ENV') === 'development',
-        ssl: configService.get<boolean>('POSTGRES_SSL', false),
+        ssl: configService.get<boolean>('POSTGRES_SSL', false) ? { rejectUnauthorized: false } : false,
     };
 };
