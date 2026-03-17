@@ -13,12 +13,13 @@ export const validationSchema = Joi.object({
     BACKEND_PORT: Joi.number().default(3001),
     FRONTEND_URL: Joi.string().default('http://localhost'),
 
-    // Database — requeridas
-    POSTGRES_HOST: Joi.string().required(),
+    // Database
+    DATABASE_URL: Joi.string().optional(),
+    POSTGRES_HOST: Joi.string().optional(),
     POSTGRES_PORT: Joi.number().default(5432),
-    POSTGRES_DB: Joi.string().required(),
-    POSTGRES_USER: Joi.string().required(),
-    POSTGRES_PASSWORD: Joi.string().required(),
+    POSTGRES_DB: Joi.string().optional(),
+    POSTGRES_USER: Joi.string().optional(),
+    POSTGRES_PASSWORD: Joi.string().optional(),
 
     // JWT — requerido en producción
     JWT_SECRET: Joi.string().when('NODE_ENV', {
