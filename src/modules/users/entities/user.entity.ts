@@ -37,7 +37,7 @@ export class User {
     @Column({ type: 'varchar', length: 20, nullable: true })
     phone: string | null;
 
-    @Column({ type: 'varchar', length: 500, nullable: true, name: 'avatar_url' })
+    @Column({ type: 'text', nullable: true, name: 'avatar_url' })
     avatarUrl: string | null;
 
     @Column({ type: 'varchar', length: 150, nullable: true })
