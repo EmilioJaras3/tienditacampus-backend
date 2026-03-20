@@ -17,7 +17,7 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "seed:history": "ts-node -r tsconfig-paths/register scripts/data-factory.ts"
+    "seed:history": "npx ts-node -r tsconfig-paths/register scripts/data-factory.ts"
   },
   "dependencies": {
     "@google-cloud/bigquery": "^8.1.1",
@@ -55,6 +55,7 @@
     "@types/node": "^20.0.0",
     "@types/passport-jwt": "^3.0.0",
     "@types/supertest": "^6.0.3",
+    "@types/uuid": "^9.0.0",
     "@typescript-eslint/eslint-plugin": "^6.0.0",
     "@typescript-eslint/parser": "^6.0.0",
     "eslint": "^8.42.0",
