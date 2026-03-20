@@ -1,0 +1,52 @@
+version: "3.9"
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: tc-backend
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - BACKEND_PORT=3001
+      - POSTGRES_HOST=${POSTGRES_HOST:-database}
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=${POSTGRES_DB:-tienditacampus}
+      - POSTGRES_USER=${POSTGRES_USER:-tc_admin}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-TienditaCampus2026DB!}
+      - JWT_SECRET=${JWT_SECRET:-mi-secreto-jwt-super-seguro}
+      - JWT_EXPIRATION=7d
+      - ARGON2_MEMORY_COST=19456
+      - ARGON2_TIME_COST=2
+      - ARGON2_PARALLELISM=1
+    ports:
+      - "3001:3001"
+    networks:
+      - tc-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3001/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-/api}
+    container_name: tc-frontend
+    restart: unless-stopped
+    environment:
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-/api}
+    networks:
+      - tc-network
+    depends_on:
+      - backend
+
+networks:
+  tc-network:
+    name: tc-network
+    external: true
