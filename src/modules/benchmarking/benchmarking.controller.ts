@@ -43,6 +43,17 @@ export class BenchmarkingController {
         return this.benchmarkingService.processDailySnapshot(authHeader);
     }
 
+    @Post('snapshot/historical')
+    async takeHistoricalSnapshot(
+        @Headers('authorization') authHeader: string,
+        @Body('days') days?: number,
+    ) {
+        if (!authHeader) {
+            throw new UnauthorizedException('Se requiere token de autenticación (Google OAuth)');
+        }
+        return this.benchmarkingService.processHistoricalSnapshot(authHeader, days || 30);
+    }
+
     @Post('snapshots/execute')
     async executeSnapshot(@Body() body: { accessToken: string }) {
         if (!body.accessToken) {

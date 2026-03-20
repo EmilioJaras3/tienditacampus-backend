@@ -62,6 +62,43 @@ export class BenchmarkingService {
             throw new BadRequestException('No hay métricas acumuladas (calls > 0) para exportar.');
         }
 
+        return this.sendToBigQuery(accessToken, metrics);
+    }
+
+    async processHistoricalSnapshot(authHeader: string, days = 30): Promise<any> {
+        const accessToken = authHeader.replace('Bearer ', '');
+        if (!accessToken) throw new BadRequestException('OAuth token is required');
+
+        const metrics = await this.entityManager.query('SELECT * FROM v_daily_export');
+        if (metrics.length === 0) {
+            throw new BadRequestException('No hay métricas base para generar historial. Ejecuta algunas consultas primero.');
+        }
+
+        const historicalRows = [];
+        const startDate = new Date();
+        startDate.setDate(startDate.getDate() - days);
+
+        for (let i = 0; i <= days; i++) {
+            const currentDay = new Date(startDate);
+            currentDay.setDate(currentDay.getDate() + i);
+            const dateStr = currentDay.toISOString().split('T')[0];
+
+            // Simular variabilidad en las métricas por día (caos)
+            metrics.forEach((m: any) => {
+                const chaos = 0.5 + Math.random(); // Factor entre 0.5 y 1.5
+                historicalRows.push({
+                    ...m,
+                    snapshot_date: dateStr,
+                    calls: Math.max(1, Math.floor(m.calls * chaos)),
+                    total_exec_time_ms: m.total_exec_time_ms * chaos,
+                });
+            });
+        }
+
+        return this.sendToBigQuery(accessToken, historicalRows);
+    }
+
+    private async sendToBigQuery(accessToken: string, rows: any[]): Promise<any> {
         try {
             const oauth2Client = new OAuth2Client();
             oauth2Client.setCredentials({ access_token: accessToken });
@@ -74,18 +111,22 @@ export class BenchmarkingService {
             const datasetId = 'benchmarking_warehouse';
             const tableId = 'daily_query_metrics';
 
-            const rows = metrics.map((m: any) => ({
-                ...m,
-                snapshot_date: m.snapshot_date.toISOString().split('T')[0]
+            // Formatear fechas para BigQuery (YYYY-MM-DD)
+            const formattedRows = rows.map(r => ({
+                ...r,
+                snapshot_date: typeof r.snapshot_date === 'string' ? r.snapshot_date : r.snapshot_date.toISOString().split('T')[0]
             }));
 
-            await bigquery.dataset(datasetId).table(tableId).insert(rows);
+            await bigquery.dataset(datasetId).table(tableId).insert(formattedRows);
 
-            await this.entityManager.query('SELECT pg_stat_statements_reset()');
+            if (rows.length < 100) { // Si es snapshot diario real, resetear
+                await this.entityManager.query('SELECT pg_stat_statements_reset()');
+            }
 
             return {
-                message: 'Snapshot enviado exitosamente a BigQuery y estadísticas reiniciadas.',
-                count: rows.length
+                message: `Exportación exitosa a BigQuery.`,
+                count: formattedRows.length,
+                status: 'COMPLETED'
             };
         } catch (error) {
             this.logger.error(`Error al enviar a BigQuery: ${error.message}`);

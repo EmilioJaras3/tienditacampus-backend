@@ -10,6 +10,11 @@ import { v4 as uuidv4 } from 'uuid';
 
 dotenv.config();
 
+// Definición de tipos para los filtros
+interface UserWithRole extends User {
+    role: 'admin' | 'seller' | 'buyer';
+}
+
 const AppDataSource = new DataSource({
     type: 'postgres',
     host: process.env.POSTGRES_HOST || 'localhost',
@@ -77,8 +82,8 @@ async function run() {
             }
         }
         
-        const sellers = allUsers.filter(u => u.role === 'seller');
-        const buyers = allUsers.filter(u => u.role === 'buyer');
+        const sellers = allUsers.filter((u: User) => u.role === 'seller');
+        const buyers = allUsers.filter((u: User) => u.role === 'buyer');
         console.log(`✅ Contabilidad final: ${allUsers.length} usuarios (${sellers.length} vendedores, ${buyers.length} compradores).`);
 
         // 3. Crear Productos por Vendedor
@@ -86,7 +91,7 @@ async function run() {
         const products = await productRepo.find();
         if (products.length < (sellers.length * 2)) {
             for (const seller of sellers) {
-                const existing = products.filter(p => p.sellerId === seller.id);
+                const existing = products.filter((p: Product) => p.sellerId === seller.id);
                 if (existing.length < 2) {
                     const prod1 = productRepo.create({
                         name: `Producto de ${seller.firstName}`,
@@ -146,7 +151,7 @@ async function run() {
                 });
                 await saleRepo.save(dailySale);
 
-                const sellerProds = products.filter(p => p.sellerId === seller.id);
+                const sellerProds = products.filter((p: Product) => p.sellerId === seller.id);
                 let dayInv = 0;
                 let dayRev = 0;
                 let daySold = 0;
