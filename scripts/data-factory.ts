@@ -53,9 +53,28 @@ async function run() {
         }
         console.log(`✅ ${categories.length} categorías listas.`);
 
-        // 2. Crear 30 Usuarios (15 Sellers, 15 Buyers)
+        // 2. Crear Usuarios (Garantizar Admin primero)
+        const defaultAdminEmail = process.env.DEFAULT_ADMIN_EMAIL || 'jarassanchezl@gmail.com';
+        const defaultAdminPass = process.env.DEFAULT_ADMIN_PASSWORD || 'emico311006L';
+        
+        let adminUser = await userRepo.findOneBy({ email: defaultAdminEmail });
+        if (!adminUser) {
+            console.log(`👤 Creando administrador por defecto: ${defaultAdminEmail}`);
+            const adminHash = await argon2.hash(defaultAdminPass);
+            adminUser = userRepo.create({
+                email: defaultAdminEmail,
+                passwordHash: adminHash,
+                firstName: 'Admin',
+                lastName: 'Tiendita',
+                role: 'admin',
+                isActive: true,
+                isEmailVerified: true
+            });
+            await userRepo.save(adminUser);
+        }
+
         const totalUsers = await userRepo.count();
-        const usersToCreate = 30 - totalUsers;
+        const usersToCreate = Math.max(0, 30 - totalUsers);
         const allUsers = await userRepo.find();
         
         if (usersToCreate > 0) {
