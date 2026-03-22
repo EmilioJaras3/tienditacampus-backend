@@ -30,7 +30,7 @@ export const databaseConfig = (
         username: configService.get<string>('POSTGRES_USER'),
         password: configService.get<string>('POSTGRES_PASSWORD'),
         autoLoadEntities: true,
-        synchronize: true,
+        synchronize: false,
         logging: configService.get<string>('NODE_ENV') === 'development',
         ssl: false,
     };
