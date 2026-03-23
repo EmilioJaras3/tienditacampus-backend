@@ -4,3 +4,5 @@
 .env.development
 dist/
 node_modules/
+.env
+.env.production
