@@ -1,0 +1,44 @@
+services:
+  - type: web
+    name: tienditacampus-backend
+    runtime: node
+    buildCommand: npm install
+    startCommand: npm run start:prod
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: BACKEND_PORT
+        value: 10000
+      - key: POSTGRES_HOST
+        fromDatabase:
+          name: tienditacampus-db
+          property: host
+      - key: POSTGRES_PORT
+        fromDatabase:
+          name: tienditacampus-db
+          property: port
+      - key: POSTGRES_DB
+        fromDatabase:
+          name: tienditacampus-db
+          property: database
+      - key: POSTGRES_USER
+        fromDatabase:
+          name: tienditacampus-db
+          property: user
+      - key: POSTGRES_PASSWORD
+        fromDatabase:
+          name: tienditacampus-db
+          property: password
+      - key: JWT_SECRET
+        value: your_super_secret_jwt_key_here_64_chars_min
+      - key: JWT_EXPIRATION
+        value: 7d
+      - key: MONGO_URI
+        value: mongodb://mongodb:27017/tienditacampus
+      - key: GOOGLE_APPLICATION_CREDENTIALS
+        value: /app/service-account-key.json
+
+databases:
+  - name: tienditacampus-db
+    databaseName: tienditacampus
+    user: tienditacampus_user

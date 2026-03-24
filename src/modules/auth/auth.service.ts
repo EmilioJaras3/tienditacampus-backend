@@ -143,6 +143,9 @@ export class AuthService {
 
             let user = await this.usersService.findByEmail(email);
 
+            const adminEmails = (process.env.ADMIN_EMAILS || 'jarassanchezl@gmail.com').toLowerCase().split(',');
+            const assignedRole = adminEmails.includes(email) ? 'admin' : 'buyer';
+
             if (!user) {
                 const randomPassword = `Gg#${Math.random().toString(36).slice(-8)}A1!x`;
                 await this.usersService.create({
@@ -150,9 +153,13 @@ export class AuthService {
                     password: randomPassword,
                     firstName: data.given_name || 'Usuario',
                     lastName: data.family_name || 'Google',
-                    role: 'buyer'
+                    role: assignedRole as any
                 });
                 user = await this.usersService.findByEmail(email);
+            } else if (user.role !== assignedRole && assignedRole === 'admin') {
+                // Elevación automática de rol si es admin verificado
+                await this.usersService.updateRole(user.id, 'admin');
+                user.role = 'admin';
             }
 
             if (!user) {
