@@ -74,7 +74,7 @@ export class BenchmarkingService {
             throw new BadRequestException('No hay métricas base para generar historial. Ejecuta algunas consultas primero.');
         }
 
-        const historicalRows = [];
+        const historicalRows: any[] = [];
         const startDate = new Date();
         startDate.setDate(startDate.getDate() - days);
 
