@@ -5,11 +5,13 @@ import {
     ManyToOne,
     JoinColumn,
     CreateDateColumn,
+    Unique,
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 import { Product } from '../../products/entities/product.entity';
 
 @Entity('weekly_reports')
+@Unique(['sellerId', 'weekStart'])
 export class WeeklyReport {
     @PrimaryGeneratedColumn('uuid')
     id: string;
