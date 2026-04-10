@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Query, Req, UseGuards, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Query, Req, UseGuards, Param, Delete, HttpCode, HttpStatus } from '@nestjs/common';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -31,6 +31,7 @@ export class ReportsController {
     }
 
     @Delete('weekly/:id')
+    @HttpCode(HttpStatus.NO_CONTENT)
     deleteReport(@Param('id') id: string, @Req() req: any) {
         return this.reportsService.remove(id, req.user as User);
     }
