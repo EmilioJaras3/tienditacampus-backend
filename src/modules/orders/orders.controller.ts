@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Body, Req, UseGuards, Param } from '@nestjs/common';
+import { Controller, Post, Get, Patch, Body, Req, UseGuards, Param, Query } from '@nestjs/common';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -19,32 +19,31 @@ export class OrdersController {
 
     @Get('my-purchases')
     @Roles('buyer', 'seller', 'admin')
-    async getBuyerPurchases(@Req() req: any) {
-        return this.ordersService.getBuyerPurchases(req.user as User);
+    async getBuyerPurchases(@Req() req: any, @Query('page') page?: number, @Query('limit') limit?: number) {
+        return this.ordersService.getBuyerPurchases(req.user as User, Number(page) || 1, Number(limit) || 20);
     }
 
     @Get('seller-sales')
     @Roles('seller', 'admin')
-    async getSellerSales(@Req() req: any) {
-        return this.ordersService.getSellerSales(req.user as User);
+    async getSellerSales(@Req() req: any, @Query('page') page?: number, @Query('limit') limit?: number) {
+        return this.ordersService.getSellerSales(req.user as User, Number(page) || 1, Number(limit) || 20);
     }
 
-    @Post(':id/accept')
+    @Patch(':id/accept')
     @Roles('seller', 'admin')
     async acceptOrder(@Param('id') id: string, @Req() req: any) {
         return this.ordersService.acceptOrder(id, req.user as User);
     }
 
-    @Post(':id/reject')
+    @Patch(':id/reject')
     @Roles('seller', 'admin')
     async rejectOrder(@Param('id') id: string, @Req() req: any) {
         return this.ordersService.rejectOrder(id, req.user as User);
     }
 
-    @Post(':id/deliver')
+    @Patch(':id/deliver')
     @Roles('buyer', 'seller', 'admin')
     async deliverOrder(@Param('id') id: string, @Req() req: any) {
-        // We use Post to make it simpler, but acting as Patch
         return this.ordersService.deliverOrder(id, req.user as User);
     }
 }
