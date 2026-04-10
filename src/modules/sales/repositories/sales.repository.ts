@@ -16,7 +16,7 @@ export interface ISalesRepository {
   findProduct(productId: string): Promise<any>;
   consumeInventory(productId: string, userId: string, units: number): Promise<void>;
   getROI(sellerId: string, startDate?: string, endDate?: string): Promise<{ investment: number; revenue: number; netProfit: number; roi: number }>;
-  getHistory(sellerId: string): Promise<DailySale[]>;
+  getHistory(sellerId: string, page?: number, limit?: number): Promise<{ data: DailySale[]; total: number; page: number; limit: number }>;
   getByWeekdayAnalytics(sellerId: string, startDate?: string, endDate?: string): Promise<any[]>;
   getPrediction(sellerId: string): Promise<any>;
 }
@@ -102,13 +102,15 @@ export class SalesRepository implements ISalesRepository {
     };
   }
 
-  async getHistory(sellerId: string): Promise<DailySale[]> {
-    return await this.dailySaleRepository.find({
+  async getHistory(sellerId: string, page = 1, limit = 20): Promise<{ data: DailySale[]; total: number; page: number; limit: number }> {
+    const [data, total] = await this.dailySaleRepository.findAndCount({
       where: { sellerId },
-      order: { saleDate: 'ASC' },
-      take: 30,
-      relations: ['details', 'details.product'], // Add relations to avoid N+1 if needed
+      order: { saleDate: 'DESC' },
+      skip: (page - 1) * limit,
+      take: limit,
+      relations: ['details', 'details.product'],
     });
+    return { data, total, page, limit };
   }
 
   async getByWeekdayAnalytics(sellerId: string, startDate?: string, endDate?: string): Promise<any[]> {

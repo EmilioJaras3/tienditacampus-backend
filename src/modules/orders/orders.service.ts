@@ -296,19 +296,25 @@ export class OrdersService {
         return prod ? Number(prod.unitCost) : 0;
     }
 
-    async getBuyerPurchases(buyer: User) {
-        return this.orderRepo.find({
+    async getBuyerPurchases(buyer: User, page = 1, limit = 20) {
+        const [data, total] = await this.orderRepo.findAndCount({
             where: { buyerId: buyer.id },
             relations: ['seller', 'items', 'items.product'],
-            order: { createdAt: 'DESC' }
+            order: { createdAt: 'DESC' },
+            skip: (page - 1) * limit,
+            take: limit,
         });
+        return { data, total, page, limit };
     }
 
-    async getSellerSales(seller: User) {
-        return this.orderRepo.find({
+    async getSellerSales(seller: User, page = 1, limit = 20) {
+        const [data, total] = await this.orderRepo.findAndCount({
             where: { sellerId: seller.id },
             relations: ['buyer', 'items', 'items.product'],
-            order: { createdAt: 'DESC' }
+            order: { createdAt: 'DESC' },
+            skip: (page - 1) * limit,
+            take: limit,
         });
+        return { data, total, page, limit };
     }
 }

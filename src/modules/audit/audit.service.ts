@@ -63,11 +63,14 @@ export class AuditService {
     }
 
     async findByMetadataKey(key: string, value: string): Promise<AuditLog[]> {
-        // Para JSONB en PostgreSQL usamos query builder o parámetros de búsqueda crudos si es complejo, 
-        // pero para llaves directas podemos usar la sintaxis de TypeORM
+        // Validar que key sólo contenga caracteres alfanuméricos/guiones bajos
+        // para prevenir inyección SQL a través del operador JSONB
+        if (!/^[a-zA-Z0-9_]+$/.test(key)) {
+            return [];
+        }
         return this.auditRepository
             .createQueryBuilder('audit')
-            .where(`audit.metadata->>'${key}' = :value`, { value })
+            .where(`audit.metadata->>:key = :value`, { key, value })
             .orderBy('audit.createdAt', 'DESC')
             .take(50)
             .getMany();

@@ -10,6 +10,7 @@ import {
 import { SalesService } from './sales.service';
 import { PrepareDailySaleDto } from './dto/prepare-daily-sale.dto';
 import { TrackSaleDto } from './dto/track-sale.dto';
+import { CloseDayDto } from './dto/close-day.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -47,8 +48,8 @@ export class SalesController {
     }
 
     @Get('history')
-    getHistory(@Req() req: any) {
-        return this.salesService.getHistory(req.user as User);
+    getHistory(@Req() req: any, @Query('page') page?: number, @Query('limit') limit?: number) {
+        return this.salesService.getHistory(req.user as User, Number(page) || 1, Number(limit) || 20);
     }
 
     @Get('analytics/by-weekday')
@@ -66,7 +67,7 @@ export class SalesController {
     }
 
     @Post('close-day')
-    closeDay(@Body() body: { items: { productId: string; waste: number; wasteReason?: 'expired' | 'damaged' | 'other' }[] }, @Req() req: any) {
-        return this.salesService.closeDay(req.user as User, body.items);
+    closeDay(@Body() dto: CloseDayDto, @Req() req: any) {
+        return this.salesService.closeDay(req.user as User, dto.items);
     }
 }
