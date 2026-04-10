@@ -49,7 +49,7 @@ export class ProductsService {
         return saved;
     }
 
-    async findAll(user: User): Promise<any[]> {
+    async findAll(user: User, page = 1, limit = 20): Promise<{ data: any[]; total: number; page: number; limit: number }> {
         const qb = this.productRepository.createQueryBuilder('product')
             .leftJoinAndSelect('product.category', 'cat')
             .leftJoin('inventory_records', 'inventory', 'inventory.product_id = product.id')
@@ -74,6 +74,14 @@ export class ProductsService {
             .addGroupBy('cat.id')
             .orderBy('product.createdAt', 'DESC');
 
+        // Count total before applying pagination
+        const countQb = this.productRepository.createQueryBuilder('product')
+            .where('product.sellerId = :sellerId', { sellerId: user.id })
+            .andWhere('product.isActive = :isActive', { isActive: true });
+        const total = await countQb.getCount();
+
+        qb.offset((page - 1) * limit).limit(limit);
+
         const rawResults = await qb.getRawMany();
 
         // Obtener historial de merma de los últimos 30 días para todos los productos del vendedor
@@ -97,7 +105,7 @@ export class ProductsService {
             wasteRateMap.set(row.product_id, handled > 0 ? lost / handled : 0);
         });
 
-        return rawResults.map(raw => {
+        const data = rawResults.map(raw => {
             const stock = parseInt(raw.stock, 10);
             const unitCost = parseFloat(raw.product_unit_cost);
             const salePrice = parseFloat(raw.product_sale_price);
@@ -106,34 +114,36 @@ export class ProductsService {
             const wasteRate = wasteRateMap.get(raw.product_id) || 0;
             const effectiveUnitCost = unitCost * (1 + wasteRate);
             const margin = salePrice - effectiveUnitCost;
-            const totalInvestment = stock * unitCost; // Los gastos fijos del stock retenido
+            const totalInvestment = stock * unitCost;
             
             const breakEvenUnits = margin > 0 && totalInvestment > 0 
                 ? Math.ceil(totalInvestment / margin) 
                 : 0;
 
             return {
-            id: raw.product_id,
-            name: raw.product_name,
-            description: raw.product_description,
-            unitCost: parseFloat(raw.product_unit_cost),
-            salePrice: parseFloat(raw.product_sale_price),
-            isPerishable: raw.product_is_perishable,
-            shelfLifeDays: raw.product_shelf_life_days,
-            imageUrl: raw.product_image_url,
-            createdAt: raw.product_created_at,
-            category: raw.cat_id ? {
-                id: raw.cat_id,
-                name: raw.cat_name
-            } : null,
-            stock,
-            wasteRate: Number((wasteRate * 100).toFixed(2)),
-            breakEvenUnits
-        };
-    });
+                id: raw.product_id,
+                name: raw.product_name,
+                description: raw.product_description,
+                unitCost: parseFloat(raw.product_unit_cost),
+                salePrice: parseFloat(raw.product_sale_price),
+                isPerishable: raw.product_is_perishable,
+                shelfLifeDays: raw.product_shelf_life_days,
+                imageUrl: raw.product_image_url,
+                createdAt: raw.product_created_at,
+                category: raw.cat_id ? {
+                    id: raw.cat_id,
+                    name: raw.cat_name
+                } : null,
+                stock,
+                wasteRate: Number((wasteRate * 100).toFixed(2)),
+                breakEvenUnits
+            };
+        });
+
+        return { data, total, page, limit };
     }
 
-    async findMarketplace(query?: string, sellerId?: string, category?: string): Promise<any[]> {
+    async findMarketplace(query?: string, sellerId?: string, category?: string, page = 1, limit = 20): Promise<{ data: any[]; total: number; page: number; limit: number }> {
         const qb = this.productRepository.createQueryBuilder('product')
             .leftJoin('product.seller', 'seller')
             .leftJoin('product.category', 'cat')
@@ -184,20 +194,35 @@ export class ProductsService {
             qb.andWhere('(product.name ILIKE :query OR product.description ILIKE :query)', { query: `%${query}%` });
         }
 
+        // Count total before applying pagination (clone query without select/groupBy for count)
+        const countQb = this.productRepository.createQueryBuilder('product')
+            .innerJoin(
+                'inventory_records', 'inventory',
+                `inventory.product_id = product.id AND inventory.status = 'active' AND (inventory.expires_at IS NULL OR inventory.expires_at >= CURRENT_DATE)`
+            )
+            .where('product.isActive = :isActive', { isActive: true })
+            .andWhere('inventory.quantity_remaining > 0');
+        if (sellerId) countQb.leftJoin('product.seller', 'seller').andWhere('seller.id = :sellerId', { sellerId });
+        if (category && category !== 'Todos') countQb.leftJoin('product.category', 'cat').andWhere('cat.name = :category', { category });
+        if (query) countQb.andWhere('(product.name ILIKE :query OR product.description ILIKE :query)', { query: `%${query}%` });
+        const total = await countQb.getCount();
+
+        qb.offset((page - 1) * limit).limit(limit);
+
         const rawResults = await qb.getRawMany();
 
-        return rawResults.map(raw => ({
+        const data = rawResults.map(raw => ({
             id: raw.product_id,
             name: raw.product_name,
             description: raw.product_description,
-            salePrice: parseFloat(raw.product_salePrice),
-            imageUrl: raw.product_imageUrl,
-            createdAt: raw.product_createdAt,
+            salePrice: parseFloat(raw.product_sale_price),
+            imageUrl: raw.product_image_url,
+            createdAt: raw.product_created_at,
             seller: {
                 id: raw.seller_id,
-                firstName: raw.seller_firstName,
-                lastName: raw.seller_lastName,
-                avatarUrl: raw.seller_avatarUrl
+                firstName: raw.seller_first_name,
+                lastName: raw.seller_last_name,
+                avatarUrl: raw.seller_avatar_url
             },
             category: {
                 id: raw.cat_id,
@@ -205,6 +230,8 @@ export class ProductsService {
             },
             quantityRemaining: parseInt(raw.quantityRemaining, 10)
         }));
+
+        return { data, total, page, limit };
     }
 
     async findOneMarketplace(id: string): Promise<Product> {
