@@ -11,6 +11,8 @@ import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { GoogleLoginDto } from './dto/google-login.dto';
+import { VerifyTwoFactorDto } from './dto/verify-2fa.dto';
+import { ResendTwoFactorDto } from './dto/resend-2fa.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 
@@ -35,6 +37,26 @@ export class AuthController {
     @HttpCode(HttpStatus.OK)
     async login(@Body() dto: LoginDto) {
         return this.authService.login(dto);
+    }
+
+    /**
+     * POST /api/auth/verify-2fa
+     * Verifica el código 2FA y retorna el JWT.
+     */
+    @Post('verify-2fa')
+    @HttpCode(HttpStatus.OK)
+    async verify2fa(@Body() dto: VerifyTwoFactorDto) {
+        return this.authService.verify2fa(dto);
+    }
+
+    /**
+     * POST /api/auth/resend-2fa
+     * Reenvía un nuevo código 2FA.
+     */
+    @Post('resend-2fa')
+    @HttpCode(HttpStatus.OK)
+    async resend2fa(@Body() dto: ResendTwoFactorDto) {
+        return this.authService.resend2fa(dto);
     }
 
     /**

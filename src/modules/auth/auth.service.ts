@@ -2,6 +2,7 @@ import {
     Injectable,
     UnauthorizedException,
     ForbiddenException,
+    NotFoundException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { verify } from '@node-rs/argon2';
@@ -10,6 +11,8 @@ import { AuditService } from '../audit/audit.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { GoogleLoginDto } from './dto/google-login.dto';
+import { VerifyTwoFactorDto } from './dto/verify-2fa.dto';
+import { ResendTwoFactorDto } from './dto/resend-2fa.dto';
 
 @Injectable()
 export class AuthService {
@@ -95,17 +98,45 @@ export class AuthService {
             throw new UnauthorizedException('Credenciales inválidas');
         }
 
+        // 2FA - Generar código en lugar de retornar el token directamente
+        const twoFactorCode = Math.floor(100000 + Math.random() * 900000).toString();
+        const twoFactorExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutos
+        
+        await this.usersService.setTwoFactorCode(user.id, twoFactorCode, twoFactorExpires);
+        
+        // Para propósitos de este MVP/demostración, imprimimos el código en la consola del backend
+        console.log(`\n\n[2FA AUTH] Código de verificación para ${user.email}: ${twoFactorCode}\n\n`);
+
+        return {
+            requiresTwoFactor: true,
+            message: 'Código de verificación enviado a tu correo electrónico',
+        };
+    }
+
+    async verify2fa(dto: VerifyTwoFactorDto) {
+        const user = await this.usersService.findByEmail(dto.email.toLowerCase());
+        
+        if (!user || user.twoFactorCode !== dto.code) {
+            throw new UnauthorizedException('Código inválido o expirado');
+        }
+        
+        if (user.twoFactorExpires && new Date() > user.twoFactorExpires) {
+            throw new UnauthorizedException('El código ha expirado');
+        }
+
+        // Si el código es correcto, procedemos a borrarlo y generar JWT
+        await this.usersService.clearTwoFactorCode(user.id);
         await this.usersService.recordSuccessfulLogin(user.id);
 
         const payload = { sub: user.id, email: user.email, role: user.role };
         const accessToken = this.jwtService.sign(payload);
 
         await this.auditService.log({
-            action: 'user.login',
+            action: 'user.login_2fa',
             entityType: 'user',
             entityId: user.id,
             userId: user.id,
-            description: `Login exitoso: ${user.email}`,
+            description: `Login 2FA exitoso: ${user.email}`,
             metadata: {
                 email: user.email,
                 role: user.role,
@@ -125,6 +156,25 @@ export class AuthService {
                 loginCount: user.loginCount + 1,
             },
             accessToken,
+        };
+    }
+
+    async resend2fa(dto: ResendTwoFactorDto) {
+        const user = await this.usersService.findByEmail(dto.email.toLowerCase());
+        
+        if (!user) {
+            throw new NotFoundException('Usuario no encontrado');
+        }
+        
+        const twoFactorCode = Math.floor(100000 + Math.random() * 900000).toString();
+        const twoFactorExpires = new Date(Date.now() + 10 * 60 * 1000);
+        
+        await this.usersService.setTwoFactorCode(user.id, twoFactorCode, twoFactorExpires);
+        
+        console.log(`\n\n[2FA RE-ENVIO] Nuevo código para ${user.email}: ${twoFactorCode}\n\n`);
+
+        return {
+            message: 'Nuevo código de verificación enviado a tu correo',
         };
     }
 
