@@ -3,8 +3,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { DailySale } from '../entities/daily-sale.entity';
 import { SaleDetail } from '../entities/sale-detail.entity';
-import { User } from '../../users/entities/user.entity';
 import { Product } from '../../products/entities/product.entity';
+import { BaseRepository } from '../../../shared/repositories/base.repository';
 
 export interface ISalesRepository {
   findToday(sellerId: string): Promise<DailySale | null>;
@@ -22,7 +22,7 @@ export interface ISalesRepository {
 }
 
 @Injectable()
-export class SalesRepository implements ISalesRepository {
+export class SalesRepository extends BaseRepository<DailySale> implements ISalesRepository {
   constructor(
     @InjectRepository(DailySale)
     private readonly dailySaleRepository: Repository<DailySale>,
@@ -30,7 +30,9 @@ export class SalesRepository implements ISalesRepository {
     private readonly saleDetailRepository: Repository<SaleDetail>,
     @InjectRepository(Product)
     private readonly productRepository: Repository<Product>,
-  ) {}
+  ) {
+    super(dailySaleRepository);
+  }
 
   async findToday(sellerId: string): Promise<DailySale | null> {
     return await this.dailySaleRepository.findOne({
@@ -73,32 +75,22 @@ export class SalesRepository implements ISalesRepository {
     await this.dailySaleRepository.update(id, updates);
   }
 
-  async getROI(sellerId: string, startDate?: string, endDate?: string): Promise<{ investment: number; revenue: number; netProfit: number; roi: number }> {
-    let qs = this.dailySaleRepository
-      .createQueryBuilder('sale')
-      .select('SUM(sale.totalInvestment)', 'sum_invest')
-      .addSelect('SUM(sale.totalRevenue)', 'sum_revenue')
-      .where('sale.sellerId = :sellerId', { sellerId });
+  async getROI(sellerId: string): Promise<{ investment: number; revenue: number; netProfit: number; roi: number }> {
+    const result = await this.dailySaleRepository.query(
+      'SELECT * FROM vw_seller_roi WHERE seller_id = $1',
+      [sellerId],
+    );
 
-    if (startDate) {
-      qs = qs.andWhere('sale.saleDate >= :startDate', { startDate });
-    }
-    if (endDate) {
-      qs = qs.andWhere('sale.saleDate <= :endDate', { endDate });
+    if (!result || result.length === 0) {
+      return { investment: 0, revenue: 0, netProfit: 0, roi: 0 };
     }
 
-    const { sum_invest, sum_revenue } = await qs.getRawOne();
-
-    const investment = Number(sum_invest || 0);
-    const revenue = Number(sum_revenue || 0);
-    const netProfit = revenue - investment;
-    const roi = investment > 0 ? (netProfit / investment) * 100 : 0;
-
+    const data = result[0];
     return {
-      investment,
-      revenue,
-      netProfit,
-      roi: Number(roi.toFixed(2))
+      investment: Number(data.global_investment),
+      revenue: Number(data.global_revenue),
+      netProfit: Number(data.global_net_profit),
+      roi: Number(data.global_roi_pct),
     };
   }
 

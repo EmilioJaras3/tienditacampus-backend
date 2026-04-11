@@ -39,12 +39,8 @@ export class SalesController {
     }
 
     @Get('roi')
-    getROI(
-        @Req() req: any,
-        @Query('startDate') startDate?: string,
-        @Query('endDate') endDate?: string
-    ) {
-        return this.salesService.getROI(req.user as User, startDate, endDate);
+    getROI(@Req() req: any) {
+        return this.salesService.getROI(req.user as User);
     }
 
     @Get('history')
@@ -53,12 +49,8 @@ export class SalesController {
     }
 
     @Get('analytics/by-weekday')
-    getByWeekdayAnalytics(
-        @Req() req: any,
-        @Query('startDate') startDate?: string,
-        @Query('endDate') endDate?: string,
-    ) {
-        return this.salesService.getByWeekdayAnalytics(req.user as User, startDate, endDate);
+    getByWeekdayAnalytics(@Req() req: any) {
+        return this.salesService.getByWeekdayAnalytics(req.user as User);
     }
 
     @Get('prediction')

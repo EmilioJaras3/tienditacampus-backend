@@ -9,6 +9,7 @@ export class DashboardService {
     async getComparison(user: User, startDate?: string, endDate?: string) {
         const from = startDate ?? null;
         const to = endDate ?? null;
+        const isAdmin = user.role === 'admin';
 
         const week_sql = `
             WITH current_period AS (
@@ -28,7 +29,7 @@ export class DashboardService {
                     COALESCE(SUM(total_revenue - total_investment), 0)::numeric(12,2) AS profit,
                     COALESCE(SUM(total_waste_cost), 0)::numeric(12,2) AS waste_cost
                 FROM daily_sales ds, current_period cp
-                WHERE ds.seller_id = $1
+                WHERE (ds.seller_id = $1 OR $2 = true)
                   AND ds.sale_date BETWEEN cp.start_date AND cp.end_date
             ),
             previous_data AS (
@@ -38,7 +39,7 @@ export class DashboardService {
                     COALESCE(SUM(total_revenue - total_investment), 0)::numeric(12,2) AS profit,
                     COALESCE(SUM(total_waste_cost), 0)::numeric(12,2) AS waste_cost
                 FROM daily_sales ds, previous_period pp
-                WHERE ds.seller_id = $1
+                WHERE (ds.seller_id = $1 OR $2 = true)
                   AND ds.sale_date BETWEEN pp.start_date AND pp.end_date
             )
             SELECT
@@ -78,7 +79,7 @@ export class DashboardService {
                     COALESCE(SUM(total_revenue - total_investment), 0)::numeric(12,2) AS profit,
                     COALESCE(SUM(total_waste_cost), 0)::numeric(12,2) AS waste_cost
                 FROM daily_sales ds, current_period cp
-                WHERE ds.seller_id = $1
+                WHERE (ds.seller_id = $1 OR $2 = true)
                   AND ds.sale_date BETWEEN cp.start_date AND cp.end_date
             ),
             previous_data AS (
@@ -88,7 +89,7 @@ export class DashboardService {
                     COALESCE(SUM(total_revenue - total_investment), 0)::numeric(12,2) AS profit,
                     COALESCE(SUM(total_waste_cost), 0)::numeric(12,2) AS waste_cost
                 FROM daily_sales ds, previous_period pp
-                WHERE ds.seller_id = $1
+                WHERE (ds.seller_id = $1 OR $2 = true)
                   AND ds.sale_date BETWEEN pp.start_date AND pp.end_date
             )
             SELECT
@@ -136,17 +137,16 @@ export class DashboardService {
             LEFT JOIN sale_details sd ON sd.product_id = p.id
             LEFT JOIN daily_sales ds ON ds.id = sd.daily_sale_id
             CROSS JOIN range_ref rr
-            WHERE p.seller_id = $1
+            WHERE (p.seller_id = $1 OR $4 = true)
               AND (ds.sale_date IS NULL OR ds.sale_date BETWEEN rr.start_date AND rr.end_date)
             GROUP BY p.id, p.name
             ORDER BY profit DESC, product_name ASC
         `;
 
-        // Anti N+1: queries independientes en paralelo → reduce latencia de t1+t2+t3 a max(t1,t2,t3)
         const [weekComparison, monthComparison, profitabilityByProduct] = await Promise.all([
-            this.dataSource.query(week_sql, [user.id]),
-            this.dataSource.query(month_sql, [user.id]),
-            this.dataSource.query(product_sql, [user.id, from, to]),
+            this.dataSource.query(week_sql, [user.id, isAdmin]),
+            this.dataSource.query(month_sql, [user.id, isAdmin]),
+            this.dataSource.query(product_sql, [user.id, from, to, isAdmin]),
         ]);
 
         return {

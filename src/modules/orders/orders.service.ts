@@ -20,11 +20,6 @@ export class OrdersService {
     ) { }
 
     async createOrder(dto: CreateOrderDto, buyer: User): Promise<Order> {
-        // PERMITIMOS COMPRAR PROPIOS PRODUCTOS PARA FACILITAR DEMOSTRACIONES Y PRUEBAS
-        // if (buyer.id === dto.sellerId) {
-        //     throw new BadRequestException('Un vendedor no puede comprar sus propios productos en esta transacción');
-        // }
-
         const queryRunner = this.dataSource.createQueryRunner();
         await queryRunner.connect();
         await queryRunner.startTransaction();
@@ -33,7 +28,6 @@ export class OrdersService {
             let totalOrderAmount = 0;
             const orderItemsToSave: OrderItem[] = [];
 
-            // 1. Process each item in the order against Inventory
             for (const item of dto.items) {
                 const product = await queryRunner.manager.findOne(Product, {
                     where: { id: item.productId, sellerId: dto.sellerId, isActive: true }
@@ -43,7 +37,6 @@ export class OrdersService {
                     throw new NotFoundException(`Producto ${item.productId} no encontrado o inactivo`);
                 }
 
-                // Verify stock exists (but don't deduct yet)
                 const activeInventory = await queryRunner.manager.findOne(InventoryRecord, {
                     where: { productId: product.id, status: 'active' }
                 });
@@ -52,7 +45,6 @@ export class OrdersService {
                     throw new BadRequestException(`Sin stock suficiente para el producto: ${product.name}`);
                 }
 
-                // subtotal calculado automáticamente por Postgres (GENERATED column)
                 const subtotal = item.quantity * Number(product.salePrice);
                 totalOrderAmount += subtotal;
 
@@ -61,22 +53,19 @@ export class OrdersService {
                 orderItem.productId = product.id;
                 orderItem.quantity = item.quantity;
                 orderItem.unitPrice = product.salePrice;
-                // orderItem.subtotal es GENERATED ALWAYS AS (quantity * unit_price) — no se asigna
 
                 orderItemsToSave.push(orderItem);
             }
 
-            // 2. Create the Order
             let order = new Order();
             order.buyerId = buyer.id;
             order.sellerId = dto.sellerId;
             order.totalAmount = totalOrderAmount;
-            order.status = 'requested'; // Changed from 'pending', now stock is only deducted on accept
+            order.status = 'requested';
             order.deliveryMessage = dto.deliveryMessage || null;
 
             order = await queryRunner.manager.save(Order, order);
 
-            // Save Items
             for (const orderItem of orderItemsToSave) {
                 orderItem.order = order;
                 orderItem.orderId = order.id;
@@ -119,7 +108,7 @@ export class OrdersService {
         await queryRunner.startTransaction();
 
         try {
-            order.status = 'accepted'; // Aceptado, listo para entregar
+            order.status = 'accepted';
             await queryRunner.manager.save(Order, order);
             await queryRunner.commitTransaction();
             return order;
@@ -165,7 +154,6 @@ export class OrdersService {
         await queryRunner.startTransaction();
 
         try {
-            // 1. FIFO: Consumir inventario de lotes más viejos primero AL MOMENTO DE LA ENTREGA
             for (const item of order.items) {
                 await this.inventoryService.consumeFIFO(
                     item.productId,
@@ -175,11 +163,9 @@ export class OrdersService {
                 );
             }
 
-            // Update the Order status
             order.status = 'completed';
             await queryRunner.manager.save(Order, order);
 
-            // Trigger the DailySale Tracking
             const todayStr = new Date().toISOString().split('T')[0];
             let dailySale = await queryRunner.manager.findOne(DailySale, {
                 where: { sellerId: order.sellerId, saleDate: todayStr },
@@ -205,7 +191,7 @@ export class OrdersService {
                 if (!saleDetail) {
                     saleDetail = new SaleDetail();
                     saleDetail.dailySaleId = dailySale.id;
-                    saleDetail.dailySale = dailySale; // Relación explícita
+                    saleDetail.dailySale = dailySale;
                     saleDetail.productId = orderItem.productId;
                     saleDetail.quantityPrepared = 0;
                     saleDetail.quantitySold = 0;
@@ -217,7 +203,6 @@ export class OrdersService {
 
                 saleDetail.quantitySold += orderItem.quantity;
 
-                // Add to array if new so cascade handles it, else save directly
                 if (isNewDetail) {
                     dailySale.details.push(saleDetail);
                 } else {
@@ -249,7 +234,6 @@ export class OrdersService {
             const profit = totalRevenue - totalInvestment;
             dailySale.profitMargin = totalRevenue > 0 ? (profit / totalRevenue) * 100 : 0;
 
-            // Calculate break_even_units
             let breakEvenUnits: number | null = null;
             if (unitsSold > 0) {
                 const avgSalePrice = totalRevenue / unitsSold;
@@ -265,10 +249,8 @@ export class OrdersService {
             }
             dailySale.breakEvenUnits = breakEvenUnits;
 
-            // Save the daily sale to handle cascade inserts of details
             await queryRunner.manager.save(DailySale, dailySale);
 
-            // Force explicit update of the aggregates to bypass TypeORM diffing bugs
             await queryRunner.manager.update(DailySale, dailySale.id, {
                 totalRevenue: dailySale.totalRevenue,
                 totalInvestment: dailySale.totalInvestment,

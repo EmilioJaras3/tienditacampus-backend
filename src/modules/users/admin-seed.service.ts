@@ -1,4 +1,4 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { hash } from '@node-rs/argon2';
@@ -6,7 +6,7 @@ import { Repository } from 'typeorm';
 import { User } from './entities/user.entity';
 
 @Injectable()
-export class AdminSeedService implements OnModuleInit {
+export class AdminSeedService implements OnApplicationBootstrap {
     private readonly logger = new Logger(AdminSeedService.name);
 
     constructor(
@@ -15,7 +15,7 @@ export class AdminSeedService implements OnModuleInit {
         private readonly usersRepository: Repository<User>,
     ) { }
 
-    async onModuleInit() {
+    async onApplicationBootstrap() {
         const emailRaw = this.configService.get<string>('DEFAULT_ADMIN_EMAIL');
         const password = this.configService.get<string>('DEFAULT_ADMIN_PASSWORD');
 

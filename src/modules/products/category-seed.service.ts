@@ -1,10 +1,10 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Category } from './entities/category.entity';
 
 @Injectable()
-export class CategorySeedService implements OnModuleInit {
+export class CategorySeedService implements OnApplicationBootstrap {
     private readonly logger = new Logger(CategorySeedService.name);
 
     constructor(
@@ -12,7 +12,7 @@ export class CategorySeedService implements OnModuleInit {
         private readonly categoryRepository: Repository<Category>,
     ) { }
 
-    async onModuleInit() {
+    async onApplicationBootstrap() {
         const categories = [
             { name: 'Snacks y Comidas', description: 'Todo tipo de snacks y alimentos preparados' },
             { name: 'Bebidas', description: 'Jugos, refrescos y agua' },

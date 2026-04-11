@@ -27,6 +27,10 @@ export class RegisterDto {
     })
     password: string;
 
+    @IsNotEmpty({ message: 'Debes aceptar los términos y condiciones' })
+    @IsIn([true], { message: 'Debes aceptar los términos y condiciones' })
+    acceptTerms: boolean;
+
     @IsString()
     @IsNotEmpty({ message: 'El nombre es requerido' })
     @MaxLength(100)

@@ -21,9 +21,11 @@ import { BreakEvenModule } from './modules/break-even/break-even.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { ForecastModule } from './modules/forecast/forecast.module'; // <-- Added here
 import { ExpirationModule } from './modules/expiration/expiration.module';
+import { SharedModule } from './shared/shared.module';
 
 @Module({
     imports: [
+        SharedModule,
         // Configuración centralizada
         ConfigModule.forRoot({
             isGlobal: true,

@@ -4,16 +4,13 @@ import { Product } from '../src/modules/products/entities/product.entity';
 import { Category } from '../src/modules/products/entities/category.entity';
 import { DailySale } from '../src/modules/sales/entities/daily-sale.entity';
 import { SaleDetail } from '../src/modules/sales/entities/sale-detail.entity';
+import { Order } from '../src/modules/orders/entities/order.entity';
+import { OrderItem } from '../src/modules/orders/entities/order-item.entity';
 import * as argon2 from '@node-rs/argon2';
 import * as dotenv from 'dotenv';
 import { v4 as uuidv4 } from 'uuid';
 
 dotenv.config();
-
-// Definición de tipos para los filtros
-interface UserWithRole extends User {
-    role: 'admin' | 'seller' | 'buyer';
-}
 
 const AppDataSource = new DataSource({
     type: 'postgres',
@@ -22,13 +19,13 @@ const AppDataSource = new DataSource({
     username: process.env.POSTGRES_USER || 'postgres',
     password: process.env.POSTGRES_PASSWORD || 'postgres',
     database: process.env.POSTGRES_DB || 'tienditacampus',
-    entities: [User, Product, Category, DailySale, SaleDetail],
+    entities: [User, Product, Category, DailySale, SaleDetail, Order, OrderItem],
     synchronize: false,
     logging: false,
 });
 
 async function run() {
-    console.log('🚀 Iniciando Data Factory - Generador de Historial (SOA Benchmarking)...');
+    console.log('🚀 Iniciando Data Factory V2 - Generador de Historial y Alumnos...');
     
     try {
         await AppDataSource.initialize();
@@ -39,9 +36,11 @@ async function run() {
         const productRepo = AppDataSource.getRepository(Product);
         const saleRepo = AppDataSource.getRepository(DailySale);
         const detailRepo = AppDataSource.getRepository(SaleDetail);
+        const orderRepo = AppDataSource.getRepository(Order);
+        const itemRepo = AppDataSource.getRepository(OrderItem);
 
-        // 1. Crear Categorías base
-        const categoryNames = ['Snacks', 'Bebidas', 'Dulces', 'Papelería', 'Electrónicos'];
+        // 1. Asegurar Categorías
+        const categoryNames = ['Comida Preparada', 'Bebidas', 'Snacks', 'Papelería'];
         const categories = [];
         for (const name of categoryNames) {
             let cat = await categoryRepo.findOneBy({ name });
@@ -51,45 +50,49 @@ async function run() {
             }
             categories.push(cat);
         }
-        console.log(`✅ ${categories.length} categorías listas.`);
 
-        // 2. Crear Usuarios (Garantizar Admin primero)
-        const defaultAdminEmail = process.env.DEFAULT_ADMIN_EMAIL || 'jarassanchezl@gmail.com';
-        const defaultAdminPass = process.env.DEFAULT_ADMIN_PASSWORD || 'emico311006L';
-        
-        let adminUser = await userRepo.findOneBy({ email: defaultAdminEmail });
-        if (!adminUser) {
-            console.log(`👤 Creando administrador por defecto: ${defaultAdminEmail}`);
-            const adminHash = await argon2.hash(defaultAdminPass);
-            adminUser = userRepo.create({
-                email: defaultAdminEmail,
-                passwordHash: adminHash,
-                firstName: 'Admin',
-                lastName: 'Tiendita',
-                role: 'admin',
-                isActive: true,
-                isEmailVerified: true
-            });
-            await userRepo.save(adminUser);
+        // 2. Usuarios Base (Los 5 originales) - Asegurar que no se toquen si ya existen
+        const baseSellers = [
+            { email: 'anagarpep14@gmail.com', first: 'Ana', last: 'Garcia' },
+            { email: 'diegoramiraasa2@gmail.com', first: 'Diego', last: 'Ramirez' },
+            { email: 'elenaaaszgomezr@gmail.com', first: 'Elena', last: 'Gomez' },
+            { email: 'carlospereeezagui23@gmail.com', first: 'Carlos', last: 'Perez' },
+            { email: 'sofialaaaaaar2535@gmail.com', first: 'Sofia', last: 'Lara' }
+        ];
+
+        const pwdHash = await argon2.hash('Password123!');
+        for (const s of baseSellers) {
+            let user = await userRepo.findOneBy({ email: s.email });
+            if (!user) {
+                user = userRepo.create({
+                    email: s.email,
+                    passwordHash: pwdHash,
+                    firstName: s.first,
+                    lastName: s.last,
+                    role: 'seller',
+                    isActive: true,
+                    isEmailVerified: true
+                });
+                await userRepo.save(user);
+            }
         }
 
-        const totalUsers = await userRepo.count();
-        const usersToCreate = Math.max(0, 30 - totalUsers);
-        const allUsers = await userRepo.find();
+        // 3. Crear 25 Alumnos extra (Sellers/Buyers aleatorios)
+        console.log('👤 Generando 25 alumnos adicionales...');
+        const campusLocs = ['Campus Norte', 'Campus Sur', 'Biblioteca Central', 'Facultad Ingenieria'];
+        const majors = ['Ingeniería', 'Derecho', 'Medicina', 'Arquitectura', 'Diseño'];
         
-        if (usersToCreate > 0) {
-            console.log(`👤 Creando ${usersToCreate} usuarios para completar el límite de 30...`);
-            const pwdHash = await argon2.hash('Test1234');
-            const campusLocs = ['Campus Norte', 'Campus Sur', 'Biblioteca Central', 'Facultad Ingenieria'];
-            const majors = ['Ingeniería', 'Derecho', 'Medicina', 'Arquitectura', 'Diseño'];
-
-            for (let i = 0; i < usersToCreate; i++) {
-                const role = i < (usersToCreate / 2) ? 'seller' : 'buyer';
-                const user = userRepo.create({
-                    email: `estudiante${allUsers.length + i}@campus.edu.mx`,
+        const newUsers = [];
+        for (let i = 1; i <= 25; i++) {
+            const email = `alumno${i}@uabc.edu.mx`;
+            let user = await userRepo.findOneBy({ email });
+            if (!user) {
+                const role = Math.random() > 0.4 ? 'buyer' : 'seller';
+                user = userRepo.create({
+                    email,
                     passwordHash: pwdHash,
-                    firstName: `Usuario${allUsers.length + i}`,
-                    lastName: `Test`,
+                    firstName: `Alumno`,
+                    lastName: `${i}`,
                     role,
                     campusLocation: campusLocs[i % campusLocs.length],
                     major: majors[i % majors.length],
@@ -97,126 +100,117 @@ async function run() {
                     isEmailVerified: true
                 });
                 await userRepo.save(user);
-                allUsers.push(user);
             }
+            newUsers.push(user);
         }
-        
-        const sellers = allUsers.filter((u: User) => u.role === 'seller');
-        const buyers = allUsers.filter((u: User) => u.role === 'buyer');
-        console.log(`✅ Contabilidad final: ${allUsers.length} usuarios (${sellers.length} vendedores, ${buyers.length} compradores).`);
 
-        // 3. Crear Productos por Vendedor
-        console.log('📦 Asegurando catálogo de productos...');
-        const products = await productRepo.find();
-        if (products.length < (sellers.length * 2)) {
-            for (const seller of sellers) {
-                const existing = products.filter((p: Product) => p.sellerId === seller.id);
-                if (existing.length < 2) {
-                    const prod1 = productRepo.create({
-                        name: `Producto de ${seller.firstName}`,
-                        description: 'Generado automáticamente para historial',
-                        unitCost: 10 + Math.random() * 20,
-                        salePrice: 40 + Math.random() * 60,
-                        seller: seller,
-                        categoryId: categories[Math.floor(Math.random() * categories.length)].id,
-                        isActive: true
-                    });
-                    await productRepo.save(prod1);
-                    products.push(prod1);
-                }
+        // 4. Asegurar Productos para todos los Sellers
+        const allSellers = await userRepo.findBy({ role: 'seller' });
+        const allProducts = [];
+        for (const seller of allSellers) {
+            let prods = await productRepo.findBy({ sellerId: seller.id });
+            if (prods.length === 0) {
+                const p = productRepo.create({
+                    name: `Producto de ${seller.firstName} ${seller.lastName}`,
+                    description: 'Producto para simulación de transacciones',
+                    unitCost: 15 + Math.random() * 20,
+                    salePrice: 35 + Math.random() * 40,
+                    sellerId: seller.id,
+                    categoryId: categories[Math.floor(Math.random() * categories.length)].id,
+                    isActive: true,
+                    imageUrl: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c'
+                });
+                await productRepo.save(p);
+                prods = [p];
             }
+            allProducts.push(...prods);
         }
-        console.log(`✅ Catálogo de ${products.length} productos listo.`);
 
-        // 4. Generar Historial de 30 días (Irregular y Gradual)
-        console.log('📈 Generando historial de 30 días con curva de crecimiento...');
+        // 5. Generar Interacciones (Pedidos y Ventas) de hace 2 semanas
+        console.log('📅 Generando interacciones históricas (2 semanas atrás)...');
+        const allBuyers = await userRepo.findBy({ role: 'buyer' });
         const startDate = new Date();
-        startDate.setDate(startDate.getDate() - 30);
+        startDate.setDate(startDate.getDate() - 14);
 
-        for (let i = 0; i <= 30; i++) {
+        for (let i = 0; i < 14; i++) {
             const currentDay = new Date(startDate);
             currentDay.setDate(currentDay.getDate() + i);
             const dateStr = currentDay.toISOString().split('T')[0];
 
-            // Curva de crecimiento: El volumen de actividad sube con los días
-            // i=0 -> 10% actividad, i=30 -> 100% actividad
-            const growthFactor = 0.1 + (i / 30) * 0.9;
-            const dayOfWeek = currentDay.getDay(); // 0-6 (Sun-Sat)
-            const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-            
-            // Factor caos: variabilidad aleatoria
-            const chaosFactor = 0.7 + Math.random() * 0.6; // entre 0.7 y 1.3
-            const activityLevel = growthFactor * chaosFactor * (isWeekend ? 0.3 : 1.0);
+            // Para cada vendedor, crear un cierre de caja (DailySale)
+            for (const seller of allSellers) {
+                let daily = await saleRepo.findOneBy({ sellerId: seller.id, saleDate: dateStr });
+                if (!daily) {
+                    daily = saleRepo.create({
+                        sellerId: seller.id,
+                        saleDate: dateStr,
+                        totalInvestment: 0,
+                        totalRevenue: 0,
+                        unitsSold: 0,
+                        unitsLost: 0,
+                        isClosed: true,
+                        createdAt: currentDay
+                    });
+                    await saleRepo.save(daily);
+                }
 
-            // Seleccionar 1-5 vendedores activos este día
-            const numActiveSellers = Math.max(1, Math.floor(activityLevel * 5));
-            const activeSellersToday = [...sellers].sort(() => 0.5 - Math.random()).slice(0, numActiveSellers);
+                // Generar 1-3 pedidos de compradores reales
+                const dayBuyers = allBuyers.sort(() => 0.5 - Math.random()).slice(0, 2);
+                const sellerProds = allProducts.filter(p => p.sellerId === seller.id);
 
-            for (const seller of activeSellersToday) {
-                // Verificar si ya existe registro para este día/vendedor
-                let dailySale = await saleRepo.findOneBy({ sellerId: seller.id, saleDate: dateStr });
-                if (dailySale) continue;
+                for (const buyer of dayBuyers) {
+                    if (sellerProds.length === 0) continue;
+                    const prod = sellerProds[0];
+                    const qty = Math.floor(Math.random() * 3) + 1;
 
-                // Crear Venta Diaria
-                dailySale = saleRepo.create({
-                    sellerId: seller.id,
-                    saleDate: dateStr,
-                    totalInvestment: 0,
-                    totalRevenue: 0,
-                    unitsSold: 0,
-                    unitsLost: 0,
-                    isClosed: true,
-                    notes: `Sincronización histórica automática (Día ${i}, AF: ${activityLevel.toFixed(2)})`
-                });
-                await saleRepo.save(dailySale);
+                    // Crear Pedido
+                    const order = orderRepo.create({
+                        buyerId: buyer.id,
+                        sellerId: seller.id,
+                        totalAmount: qty * parseFloat(prod.salePrice.toString()),
+                        status: 'completed',
+                        createdAt: currentDay
+                    });
+                    await orderRepo.save(order);
 
-                const sellerProds = products.filter((p: Product) => p.sellerId === seller.id);
-                let dayInv = 0;
-                let dayRev = 0;
-                let daySold = 0;
+                    const orderItem = itemRepo.create({
+                        orderId: order.id,
+                        productId: prod.id,
+                        quantity: qty,
+                        unitPrice: parseFloat(prod.salePrice.toString()),
+                        subtotal: qty * parseFloat(prod.salePrice.toString()),
+                        createdAt: currentDay
+                    });
+                    await itemRepo.save(orderItem);
 
-                for (const prod of sellerProds) {
-                    const qPrepared = Math.floor(activityLevel * (20 + Math.random() * 30)) + 5;
-                    const qSold = Math.floor(qPrepared * (0.6 + Math.random() * 0.4));
-                    const qLost = Math.max(0, qPrepared - qSold - Math.floor(Math.random() * 5));
+                    // Actualizar DailySale
+                    daily.unitsSold += qty;
+                    daily.totalRevenue += orderItem.subtotal;
+                    daily.totalInvestment += qty * parseFloat(prod.unitCost.toString());
 
-                    const detail = detailRepo.create({
-                        dailySaleId: dailySale.id,
+                    // Registrar SaleDetail (Merma 0 para pedidos directos exitosos)
+                    const sDetail = detailRepo.create({
+                        dailySaleId: daily.id,
                         productId: prod.id,
                         unitCost: parseFloat(prod.unitCost.toString()),
                         unitPrice: parseFloat(prod.salePrice.toString()),
-                        quantityPrepared: qPrepared,
-                        quantitySold: qSold,
-                        quantityLost: qLost,
-                        wasteCost: qLost * parseFloat(prod.unitCost.toString())
+                        quantityPrepared: qty + 2,
+                        quantitySold: qty,
+                        quantityLost: 0,
+                        wasteCost: 0,
+                        createdAt: currentDay
                     });
-                    
-                    await detailRepo.save(detail);
-                    dayInv += qPrepared * parseFloat(prod.unitCost.toString());
-                    dayRev += qSold * parseFloat(prod.salePrice.toString());
-                    daySold += qSold;
+                    await detailRepo.save(sDetail);
                 }
-
-                dailySale.totalInvestment = dayInv;
-                dailySale.totalRevenue = dayRev;
-                dailySale.unitsSold = daySold;
-                await saleRepo.save(dailySale);
+                await saleRepo.save(daily);
             }
-            
-            if (i % 5 === 0) console.log(`... procesando día ${i}/30 (${dateStr})`);
         }
 
-        console.log('✅ Historial de PostgreSQL poblado exitosamente.');
-        
-        // 5. Preparar BigQuery Snapshot (Opcional: Si el usuario quiere enviarlo ahora)
-        console.log('\n💡 Tip: Ahora puedes ir a la app y ejecutar la exportación a BigQuery.');
-        console.log('Los datos de los últimos 30 días aparecerán en tus gráficas de Venta Diaria.');
-
+        console.log('✅ Finalizado: Alumnos creados e interacciones sembradas.');
         await AppDataSource.destroy();
         process.exit(0);
-
-    } catch (error) {
-        console.error('❌ Error fatal en Data Factory:', error);
+    } catch (err) {
+        console.error('❌ Error fatal:', err);
         process.exit(1);
     }
 }

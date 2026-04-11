@@ -10,22 +10,27 @@ import { InventoryRecord } from '../inventory/entities/inventory-record.entity';
 import { Product } from '../products/entities/product.entity';
 import { User } from '../users/entities/user.entity';
 import { InventoryModule } from '../inventory/inventory.module';
+import { CreateOrderUseCase } from './use-cases/create-order.use-case';
+import { DeliverOrderUseCase } from './use-cases/deliver-order.use-case';
 
 @Module({
     imports: [
         TypeOrmModule.forFeature([
             Order,
             OrderItem,
+            Product,
+            InventoryRecord,
             DailySale,
             SaleDetail,
-            InventoryRecord,
-            Product,
-            User,
         ]),
         InventoryModule,
     ],
     controllers: [OrdersController],
-    providers: [OrdersService],
+    providers: [
+        OrdersService,
+        CreateOrderUseCase,
+        DeliverOrderUseCase,
+    ],
     exports: [OrdersService],
 })
 export class OrdersModule { }

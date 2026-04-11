@@ -36,15 +36,15 @@ export class SalesService {
         return await this.trackSaleUseCase.execute(trackDto, user);
     }
 
-    async getROI(user: User, startDate?: string, endDate?: string) {
-        return await this.salesRepository.getROI(user.id, startDate, endDate);
+    async getROI(user: User) {
+        return await this.salesRepository.getROI(user.id);
     }
 
     async getHistory(user: User, page = 1, limit = 20) {
         return await this.salesRepository.getHistory(user.id, page, limit);
     }
 
-    async getByWeekdayAnalytics(user: User, startDate?: string, endDate?: string) {
-        return await this.salesRepository.getByWeekdayAnalytics(user.id, startDate, endDate);
+    async getByWeekdayAnalytics(user: User) {
+        return await this.salesRepository.getByWeekdayAnalytics(user.id);
     }
 }
