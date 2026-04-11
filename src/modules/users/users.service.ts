@@ -158,4 +158,24 @@ export class UsersService {
             passwordChangedAt: new Date(),
         });
     }
+
+    /**
+     * Set the two factor code for a user
+     */
+    async setTwoFactorCode(id: string, code: string, expires: Date): Promise<void> {
+        await this.usersRepository.update(id, {
+            twoFactorCode: code,
+            twoFactorExpires: expires,
+        });
+    }
+
+    /**
+     * Clear the two factor code for a user
+     */
+    async clearTwoFactorCode(id: string): Promise<void> {
+        await this.usersRepository.update(id, {
+            twoFactorCode: null,
+            twoFactorExpires: null,
+        });
+    }
 }
