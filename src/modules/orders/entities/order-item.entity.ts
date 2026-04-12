@@ -34,7 +34,13 @@ export class OrderItem {
     @Column({ type: 'decimal', precision: 10, scale: 2, name: 'unit_price' })
     unitPrice: number;
 
-    @Column({ type: 'decimal', precision: 10, scale: 2 })
+    @Column({
+        type: 'decimal',
+        precision: 10,
+        scale: 2,
+        insert: false,
+        update: false,
+    })
     subtotal: number;
 
     @CreateDateColumn({ type: 'timestamptz', name: 'created_at' })
