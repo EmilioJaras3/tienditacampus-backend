@@ -52,7 +52,7 @@ export class OrdersService {
                     throw new BadRequestException(`Sin stock suficiente para el producto: ${product.name}`);
                 }
 
-                // calculate item total
+                // subtotal calculado automáticamente por Postgres (GENERATED column)
                 const subtotal = item.quantity * Number(product.salePrice);
                 totalOrderAmount += subtotal;
 
@@ -61,7 +61,7 @@ export class OrdersService {
                 orderItem.productId = product.id;
                 orderItem.quantity = item.quantity;
                 orderItem.unitPrice = product.salePrice;
-                orderItem.subtotal = subtotal;
+                // orderItem.subtotal es GENERATED ALWAYS AS (quantity * unit_price) — no se asigna
 
                 orderItemsToSave.push(orderItem);
             }
