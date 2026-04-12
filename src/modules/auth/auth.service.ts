@@ -14,6 +14,7 @@ import { GoogleLoginDto } from './dto/google-login.dto';
 import { VerifyTwoFactorDto } from './dto/verify-2fa.dto';
 import { ResendTwoFactorDto } from './dto/resend-2fa.dto';
 import { MailerService } from '../two-factor/mailer.service';
+import { TwoFactorService } from '../two-factor/two-factor.service';
 
 @Injectable()
 export class AuthService {
@@ -22,6 +23,7 @@ export class AuthService {
         private readonly jwtService: JwtService,
         private readonly auditService: AuditService,
         private readonly mailerService: MailerService,
+        private readonly twoFactorService: TwoFactorService,
     ) { }
 
     async register(dto: RegisterDto) {
@@ -101,11 +103,7 @@ export class AuthService {
         }
 
         // 2FA - Generar código en lugar de retornar el token directamente
-        const twoFactorCode = Math.floor(100000 + Math.random() * 900000).toString();
-        const twoFactorExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutos
-        
-        await this.usersService.setTwoFactorCode(user.id, twoFactorCode, twoFactorExpires);
-        
+        const twoFactorCode = await this.twoFactorService.generateCode(user.id);
         await this.mailerService.send2faCode(user.email, twoFactorCode);
 
         return {
@@ -117,16 +115,16 @@ export class AuthService {
     async verify2fa(dto: VerifyTwoFactorDto) {
         const user = await this.usersService.findByEmail(dto.email.toLowerCase());
         
-        if (!user || user.twoFactorCode !== dto.code) {
-            throw new UnauthorizedException('Código inválido o expirado');
-        }
-        
-        if (user.twoFactorExpires && new Date() > user.twoFactorExpires) {
-            throw new UnauthorizedException('El código ha expirado');
+        if (!user) {
+            throw new UnauthorizedException('Código o usuario inválido');
         }
 
-        // Si el código es correcto, procedemos a borrarlo y generar JWT
-        await this.usersService.clearTwoFactorCode(user.id);
+        const isCodeValid = await this.twoFactorService.verifyCode(user.id, dto.code);
+        if (!isCodeValid) {
+            throw new UnauthorizedException('Código inválido o expirado');
+        }
+
+        // Si el código es correcto, procedemos a generar JWT
         await this.usersService.recordSuccessfulLogin(user.id);
 
         const payload = { sub: user.id, email: user.email, role: user.role };
@@ -167,11 +165,7 @@ export class AuthService {
             throw new NotFoundException('Usuario no encontrado');
         }
         
-        const twoFactorCode = Math.floor(100000 + Math.random() * 900000).toString();
-        const twoFactorExpires = new Date(Date.now() + 10 * 60 * 1000);
-        
-        await this.usersService.setTwoFactorCode(user.id, twoFactorCode, twoFactorExpires);
-        
+        const twoFactorCode = await this.twoFactorService.generateCode(user.id);
         await this.mailerService.send2faCode(user.email, twoFactorCode);
 
         return {

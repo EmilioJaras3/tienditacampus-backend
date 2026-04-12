@@ -90,15 +90,7 @@ export class User {
     passwordChangedAt: Date | null;
 
     // ── 2FA ───────────────────────────────────────────────
-    @Column({ type: 'varchar', length: 6, nullable: true, name: 'two_factor_code' })
-    twoFactorCode: string | null;
-
-    @Column({
-        type: 'timestamptz',
-        nullable: true,
-        name: 'two_factor_expires',
-    })
-    twoFactorExpires: Date | null;
+    // 2FA codes are now strictly managed in the two_factor_codes table.
 
     // ── Auditoría ─────────────────────────────────────────
     @CreateDateColumn({
