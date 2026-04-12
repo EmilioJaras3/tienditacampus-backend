@@ -13,6 +13,7 @@ import { LoginDto } from './dto/login.dto';
 import { GoogleLoginDto } from './dto/google-login.dto';
 import { VerifyTwoFactorDto } from './dto/verify-2fa.dto';
 import { ResendTwoFactorDto } from './dto/resend-2fa.dto';
+import { MailerService } from '../two-factor/mailer.service';
 
 @Injectable()
 export class AuthService {
@@ -20,6 +21,7 @@ export class AuthService {
         private readonly usersService: UsersService,
         private readonly jwtService: JwtService,
         private readonly auditService: AuditService,
+        private readonly mailerService: MailerService,
     ) { }
 
     async register(dto: RegisterDto) {
@@ -104,8 +106,7 @@ export class AuthService {
         
         await this.usersService.setTwoFactorCode(user.id, twoFactorCode, twoFactorExpires);
         
-        // Para propósitos de este MVP/demostración, imprimimos el código en la consola del backend
-        console.log(`\n\n[2FA AUTH] Código de verificación para ${user.email}: ${twoFactorCode}\n\n`);
+        await this.mailerService.send2faCode(user.email, twoFactorCode);
 
         return {
             requiresTwoFactor: true,
@@ -171,7 +172,7 @@ export class AuthService {
         
         await this.usersService.setTwoFactorCode(user.id, twoFactorCode, twoFactorExpires);
         
-        console.log(`\n\n[2FA RE-ENVIO] Nuevo código para ${user.email}: ${twoFactorCode}\n\n`);
+        await this.mailerService.send2faCode(user.email, twoFactorCode);
 
         return {
             message: 'Nuevo código de verificación enviado a tu correo',
