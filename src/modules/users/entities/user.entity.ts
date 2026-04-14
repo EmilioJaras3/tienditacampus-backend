@@ -105,6 +105,16 @@ export class User {
     })
     updatedAt: Date;
 
+    @Column({ type: 'varchar', length: 6, nullable: true, name: 'two_factor_code' })
+    twoFactorCode: string | null;
+
+    @Column({
+        type: 'timestamptz',
+        nullable: true,
+        name: 'two_factor_expires',
+    })
+    twoFactorExpires: Date | null;
+
     // ── Helpers ───────────────────────────────────────────
 
     /**

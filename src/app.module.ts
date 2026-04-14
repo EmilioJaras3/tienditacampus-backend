@@ -1,7 +1,9 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { ScheduleModule } from '@nestjs/schedule'; // <-- Added here
+import { ScheduleModule } from '@nestjs/schedule';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
 import { configuration } from './config/configuration';
 import { validationSchema } from './config/validation.schema';
 import { databaseConfig } from './config/database.config';
@@ -34,7 +36,11 @@ import { SharedModule } from './shared/shared.module';
         }),
 
         // ── Tareas Programadas (Cron Jobs) ────────────
-        ScheduleModule.forRoot(), // <-- Added here
+        ScheduleModule.forRoot(),
+        ServeStaticModule.forRoot({
+            rootPath: join(__dirname, '..', 'uploads'),
+            serveRoot: '/uploads',
+        }),
 
         // ── Base de datos RELACIONAL (PostgreSQL) ────────────
         TypeOrmModule.forRootAsync({

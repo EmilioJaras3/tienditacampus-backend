@@ -8,7 +8,6 @@ import { Order } from '../src/modules/orders/entities/order.entity';
 import { OrderItem } from '../src/modules/orders/entities/order-item.entity';
 import * as argon2 from '@node-rs/argon2';
 import * as dotenv from 'dotenv';
-import { v4 as uuidv4 } from 'uuid';
 
 dotenv.config();
 
@@ -25,7 +24,7 @@ const AppDataSource = new DataSource({
 });
 
 async function run() {
-    console.log('🚀 Iniciando Data Factory V2 - Generador de Historial y Alumnos...');
+    console.log('🚀 Iniciando Data Factory V4 - "Crecimiento y Pausa Histórica"...');
     
     try {
         await AppDataSource.initialize();
@@ -39,174 +38,130 @@ async function run() {
         const orderRepo = AppDataSource.getRepository(Order);
         const itemRepo = AppDataSource.getRepository(OrderItem);
 
-        // 1. Asegurar Categorías
+        // 0. LIMPIEZA TOTAL
+        console.log('🧹 Limpiando base de datos...');
+        await AppDataSource.query('TRUNCATE order_items, orders, sale_details, daily_sales, products, users, categories CASCADE');
+
+        // 1. Categorías
         const categoryNames = ['Comida Preparada', 'Bebidas', 'Snacks', 'Papelería'];
-        const categories = [];
+        const categoriesMap: Record<string, Category> = {};
         for (const name of categoryNames) {
-            let cat = await categoryRepo.findOneBy({ name });
-            if (!cat) {
-                cat = categoryRepo.create({ name, description: `Categoría de ${name}` });
-                await categoryRepo.save(cat);
-            }
-            categories.push(cat);
+            const cat = categoryRepo.create({ name, description: `Categoría de ${name}` });
+            await categoryRepo.save(cat);
+            categoriesMap[name] = cat;
         }
 
-        // 2. Usuarios Base (Los 5 originales) - Asegurar que no se toquen si ya existen
-        const baseSellers = [
-            { email: 'anagarpep14@gmail.com', first: 'Ana', last: 'Garcia' },
-            { email: 'diegoramiraasa2@gmail.com', first: 'Diego', last: 'Ramirez' },
-            { email: 'elenaaaszgomezr@gmail.com', first: 'Elena', last: 'Gomez' },
-            { email: 'carlospereeezagui23@gmail.com', first: 'Carlos', last: 'Perez' },
-            { email: 'sofialaaaaaar2535@gmail.com', first: 'Sofia', last: 'Lara' }
+        // 2. Definir los 4 Vendedores Reales
+        const realSellers = [
+            { email: 'antonio.hoyos@uabc.edu.mx', first: 'Antonio', last: 'de Hoyos', product: 'Torta de Jamón Especial', cat: 'Comida Preparada', cost: 25, price: 55 },
+            { email: 'tono.picafresas@uabc.edu.mx', first: 'Toño', last: 'Picafresas', product: 'Bolsa de Picafresas (10pz)', cat: 'Snacks', cost: 8, price: 20 },
+            { email: 'nadia.brownies@uabc.edu.mx', first: 'Nadia', last: 'Brownies', product: 'Brownie de Chocolate Casero', cat: 'Comida Preparada', cost: 12, price: 35 },
+            { email: 'diego.chicles@uabc.edu.mx', first: 'Diego', last: 'Chicles', product: 'Paquete Chicles Clorets', cat: 'Snacks', cost: 5, price: 15 }
         ];
 
         const pwdHash = await argon2.hash('Password123!');
-        for (const s of baseSellers) {
-            let user = await userRepo.findOneBy({ email: s.email });
-            if (!user) {
-                user = userRepo.create({
-                    email: s.email,
-                    passwordHash: pwdHash,
-                    firstName: s.first,
-                    lastName: s.last,
-                    role: 'seller',
-                    isActive: true,
-                    isEmailVerified: true
-                });
-                await userRepo.save(user);
-            }
+        const sellers = [];
+        for (const s of realSellers) {
+            const user = userRepo.create({
+                email: s.email, passwordHash: pwdHash, firstName: s.first, lastName: s.last,
+                role: 'seller', isActive: true, isEmailVerified: true, campusLocation: 'Campus Norte', major: 'Ingeniería'
+            });
+            await userRepo.save(user);
+            sellers.push({ ...user, meta: s });
         }
 
-        // 3. Crear 25 Alumnos extra (Sellers/Buyers aleatorios)
-        console.log('👤 Generando 25 alumnos adicionales...');
-        const campusLocs = ['Campus Norte', 'Campus Sur', 'Biblioteca Central', 'Facultad Ingenieria'];
-        const majors = ['Ingeniería', 'Derecho', 'Medicina', 'Arquitectura', 'Diseño'];
-        
-        const newUsers = [];
-        for (let i = 1; i <= 25; i++) {
-            const email = `alumno${i}@uabc.edu.mx`;
-            let user = await userRepo.findOneBy({ email });
-            if (!user) {
-                const role = Math.random() > 0.4 ? 'buyer' : 'seller';
-                user = userRepo.create({
-                    email,
-                    passwordHash: pwdHash,
-                    firstName: `Alumno`,
-                    lastName: `${i}`,
-                    role,
-                    campusLocation: campusLocs[i % campusLocs.length],
-                    major: majors[i % majors.length],
-                    isActive: true,
-                    isEmailVerified: true
-                });
-                await userRepo.save(user);
-            }
-            newUsers.push(user);
+        // 3. Crear 11 Compradores Alumnos
+        const buyers = [];
+        const studentNames = ['Mateo', 'Sofia', 'Sebastian', 'Valentina', 'Santiago', 'Isabella', 'Leonardo', 'Camila', 'Emiliano', 'Jimena', 'Julian'];
+        for (let i = 0; i < 11; i++) {
+            const user = userRepo.create({
+                email: `alumno${i+1}@uabc.edu.mx`, passwordHash: pwdHash, firstName: studentNames[i], lastName: `Suárez`,
+                role: 'buyer', campusLocation: 'Campus Sur', major: 'Derecho', isActive: true, isEmailVerified: true
+            });
+            await userRepo.save(user);
+            buyers.push(user);
         }
 
-        // 4. Asegurar Productos para todos los Sellers
-        const allSellers = await userRepo.findBy({ role: 'seller' });
-        const allProducts = [];
-        for (const seller of allSellers) {
-            let prods = await productRepo.findBy({ sellerId: seller.id });
-            if (prods.length === 0) {
-                const p = productRepo.create({
-                    name: `Producto de ${seller.firstName} ${seller.lastName}`,
-                    description: 'Producto para simulación de transacciones',
-                    unitCost: 15 + Math.random() * 20,
-                    salePrice: 35 + Math.random() * 40,
-                    sellerId: seller.id,
-                    categoryId: categories[Math.floor(Math.random() * categories.length)].id,
-                    isActive: true,
-                    imageUrl: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c'
-                });
-                await productRepo.save(p);
-                prods = [p];
-            }
-            allProducts.push(...prods);
+        // 4. Productos
+        const productsDB = [];
+        for (const s of sellers) {
+            const p = productRepo.create({
+                name: s.meta.product, description: `Producto estrella de ${s.firstName}`,
+                unitCost: s.meta.cost, salePrice: s.meta.price, sellerId: s.id,
+                categoryId: categoriesMap[s.meta.cat].id, isActive: true,
+                imageUrl: s.meta.cat === 'Snacks' ? 'https://images.unsplash.com/photo-1599490659223-930b447ff764' : 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c'
+            });
+            await productRepo.save(p);
+            productsDB.push(p);
         }
 
-        // 5. Generar Interacciones (Pedidos y Ventas) de hace 2 semanas
-        console.log('📅 Generando interacciones históricas (2 semanas atrás)...');
-        const allBuyers = await userRepo.findBy({ role: 'buyer' });
+        // 5. Historial de 60 días con CRECIMIENTO y PAUSA
+        console.log('📅 Generando 60 días de historial (46 días de actividad + 14 días de pausa)...');
         const startDate = new Date();
-        startDate.setDate(startDate.getDate() - 14);
+        startDate.setDate(startDate.getDate() - 60);
 
-        for (let i = 0; i < 14; i++) {
+        for (let d = 0; d <= 60; d++) {
             const currentDay = new Date(startDate);
-            currentDay.setDate(currentDay.getDate() + i);
+            currentDay.setDate(currentDay.getDate() + d);
             const dateStr = currentDay.toISOString().split('T')[0];
 
-            // Para cada vendedor, crear un cierre de caja (DailySale)
-            for (const seller of allSellers) {
-                let daily = await saleRepo.findOneBy({ sellerId: seller.id, saleDate: dateStr });
-                if (!daily) {
-                    daily = saleRepo.create({
-                        sellerId: seller.id,
-                        saleDate: dateStr,
-                        totalInvestment: 0,
-                        totalRevenue: 0,
-                        unitsSold: 0,
-                        unitsLost: 0,
-                        isClosed: true,
-                        createdAt: currentDay
-                    });
-                    await saleRepo.save(daily);
-                }
+            // PAUSA: De hace 14 días hasta hoy, no hay actividad
+            const isPaused = d > 46; 
 
-                // Generar 1-3 pedidos de compradores reales
-                const dayBuyers = allBuyers.sort(() => 0.5 - Math.random()).slice(0, 2);
-                const sellerProds = allProducts.filter(p => p.sellerId === seller.id);
+            for (const seller of sellers) {
+                const prod = productsDB.find(p => p.sellerId === seller.id);
+                if (!prod) continue;
 
-                for (const buyer of dayBuyers) {
-                    if (sellerProds.length === 0) continue;
-                    const prod = sellerProds[0];
-                    const qty = Math.floor(Math.random() * 3) + 1;
+                const daily = saleRepo.create({
+                    sellerId: seller.id, saleDate: dateStr, totalInvestment: 0, totalRevenue: 0,
+                    unitsSold: 0, unitsLost: 0, isClosed: true, createdAt: currentDay
+                });
+                await saleRepo.save(daily);
 
-                    // Crear Pedido
+                if (isPaused) continue; // Saltamos la generación de transacciones si estamos en pausa
+
+                // CRECIMIENTO GRADUAL: Aumenta el volumen de ventas según el día d
+                // Día 0: 1-2 transacciones. Día 46: 3-8 transacciones.
+                const growthFactor = (d / 46); 
+                const maxTx = Math.floor(growthFactor * 5) + 2;
+                const dailyTransactions = Math.floor(Math.random() * maxTx) + 1;
+
+                for (let t = 0; t < dailyTransactions; t++) {
+                    const buyer = buyers[Math.floor(Math.random() * buyers.length)];
+                    const qty = Math.floor(Math.random() * 2) + 1;
+
                     const order = orderRepo.create({
-                        buyerId: buyer.id,
-                        sellerId: seller.id,
-                        totalAmount: qty * parseFloat(prod.salePrice.toString()),
-                        status: 'completed',
-                        createdAt: currentDay
+                        buyerId: buyer.id, sellerId: seller.id, totalAmount: qty * Number(prod.salePrice),
+                        status: 'completed', createdAt: currentDay
                     });
                     await orderRepo.save(order);
 
                     const orderItem = itemRepo.create({
-                        orderId: order.id,
-                        productId: prod.id,
-                        quantity: qty,
-                        unitPrice: parseFloat(prod.salePrice.toString()),
-                        subtotal: qty * parseFloat(prod.salePrice.toString()),
-                        createdAt: currentDay
+                        orderId: order.id, productId: prod.id, quantity: qty,
+                        unitPrice: Number(prod.salePrice), subtotal: qty * Number(prod.salePrice), createdAt: currentDay
                     });
                     await itemRepo.save(orderItem);
 
-                    // Actualizar DailySale
-                    daily.unitsSold += qty;
-                    daily.totalRevenue += orderItem.subtotal;
-                    daily.totalInvestment += qty * parseFloat(prod.unitCost.toString());
+                    const wasteProb = seller.meta.cat === 'Comida Preparada' ? 0.20 : 0.05;
+                    const lostQty = Math.random() < wasteProb ? 1 : 0;
 
-                    // Registrar SaleDetail (Merma 0 para pedidos directos exitosos)
                     const sDetail = detailRepo.create({
-                        dailySaleId: daily.id,
-                        productId: prod.id,
-                        unitCost: parseFloat(prod.unitCost.toString()),
-                        unitPrice: parseFloat(prod.salePrice.toString()),
-                        quantityPrepared: qty + 2,
-                        quantitySold: qty,
-                        quantityLost: 0,
-                        wasteCost: 0,
-                        createdAt: currentDay
+                        dailySaleId: daily.id, productId: prod.id, unitCost: Number(prod.unitCost),
+                        unitPrice: Number(prod.salePrice), quantityPrepared: qty + lostQty,
+                        quantitySold: qty, quantityLost: lostQty, wasteCost: lostQty * Number(prod.unitCost), createdAt: currentDay
                     });
                     await detailRepo.save(sDetail);
+
+                    daily.unitsSold += qty;
+                    daily.unitsLost += lostQty;
+                    daily.totalRevenue += orderItem.subtotal;
+                    daily.totalInvestment += (qty + lostQty) * Number(prod.unitCost);
                 }
                 await saleRepo.save(daily);
             }
         }
 
-        console.log('✅ Finalizado: Alumnos creados e interacciones sembradas.');
+        console.log('✅ Simulación completada: 60 días generados con éxito.');
         await AppDataSource.destroy();
         process.exit(0);
     } catch (err) {

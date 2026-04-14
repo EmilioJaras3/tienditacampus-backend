@@ -42,9 +42,6 @@ export class LoginUseCase {
 
         await this.usersService.recordSuccessfulLogin(user.id);
 
-        const payload = { sub: user.id, email: user.email, role: user.role };
-        const accessToken = this.jwtService.sign(payload);
-
         return {
             user: {
                 id: user.id,
@@ -53,7 +50,7 @@ export class LoginUseCase {
                 lastName: user.lastName,
                 role: user.role,
             },
-            accessToken,
+            requiresTwoFactor: true,
         };
     }
 }

@@ -13,6 +13,13 @@ export class ReportsService {
     ) { }
 
     async generateWeeklyReport(user: User, weekStart?: string) {
+        // First delete any existing report for this seller and week to avoid duplicate or constraint errors
+        await this.dataSource.query(
+            `DELETE FROM weekly_reports WHERE seller_id = $1 AND week_start = COALESCE($2::date, date_trunc('week', CURRENT_DATE)::date)`,
+            [user.id, weekStart ?? null]
+        );
+
+        // Then insert the new calculated report
         await this.dataSource.query(
             `
             WITH target_week AS (
@@ -79,18 +86,6 @@ export class ReportsService {
                 END AS loss_percentage,
                 (SELECT bp.product_id FROM best_product bp WHERE bp.rn = 1)
             FROM weekly_base wb
-            ON CONFLICT (seller_id, week_start)
-            DO UPDATE SET
-                week_end = EXCLUDED.week_end,
-                total_investment = EXCLUDED.total_investment,
-                total_revenue = EXCLUDED.total_revenue,
-                total_profit = EXCLUDED.total_profit,
-                avg_profit_margin = EXCLUDED.avg_profit_margin,
-                total_units_sold = EXCLUDED.total_units_sold,
-                total_units_lost = EXCLUDED.total_units_lost,
-                total_waste_cost = EXCLUDED.total_waste_cost,
-                loss_percentage = EXCLUDED.loss_percentage,
-                best_selling_product = EXCLUDED.best_selling_product
             `,
             [user.id, weekStart ?? null],
         );

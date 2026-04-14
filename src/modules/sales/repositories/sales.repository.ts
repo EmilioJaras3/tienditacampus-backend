@@ -77,7 +77,19 @@ export class SalesRepository extends BaseRepository<DailySale> implements ISales
 
   async getROI(sellerId: string): Promise<{ investment: number; revenue: number; netProfit: number; roi: number }> {
     const result = await this.dailySaleRepository.query(
-      'SELECT * FROM vw_seller_roi WHERE seller_id = $1',
+      `
+      SELECT 
+        COALESCE(SUM(total_investment), 0)::numeric(12,2) as global_investment,
+        COALESCE(SUM(total_revenue), 0)::numeric(12,2) as global_revenue,
+        (COALESCE(SUM(total_revenue), 0) - COALESCE(SUM(total_investment), 0))::numeric(12,2) as global_net_profit,
+        CASE 
+          WHEN COALESCE(SUM(total_investment), 0) > 0 
+          THEN ROUND(((COALESCE(SUM(total_revenue), 0) - COALESCE(SUM(total_investment), 0)) / COALESCE(SUM(total_investment), 0)) * 100, 2)
+          ELSE 0 
+        END::numeric(5,2) as global_roi_pct
+      FROM daily_sales
+      WHERE seller_id = $1
+      `,
       [sellerId],
     );
 

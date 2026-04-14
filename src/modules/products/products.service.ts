@@ -7,7 +7,6 @@ import { UpdateProductDto } from './dto/update-product.dto';
 import { Category } from './entities/category.entity';
 import { User } from '../users/entities/user.entity';
 import { InventoryRecord } from '../inventory/entities/inventory-record.entity';
-
 import { AuditService } from '../audit/audit.service';
 
 @Injectable()
@@ -74,17 +73,15 @@ export class ProductsService {
             .addGroupBy('cat.id')
             .orderBy('product.createdAt', 'DESC');
 
-        // Count total before applying pagination
-        const countQb = this.productRepository.createQueryBuilder('product')
+        const total = await this.productRepository.createQueryBuilder('product')
             .where('product.sellerId = :sellerId', { sellerId: user.id })
-            .andWhere('product.isActive = :isActive', { isActive: true });
-        const total = await countQb.getCount();
+            .andWhere('product.isActive = :isActive', { isActive: true })
+            .getCount();
 
         qb.offset((page - 1) * limit).limit(limit);
 
         const rawResults = await qb.getRawMany();
 
-        // Obtener historial de merma de los últimos 30 días para todos los productos del vendedor
         const wasteRates = await this.productRepository.query(
             `SELECT
                 sd.product_id,
@@ -106,11 +103,10 @@ export class ProductsService {
         });
 
         const data = rawResults.map(raw => {
-            const stock = parseInt(raw.stock, 10);
-            const unitCost = parseFloat(raw.product_unit_cost);
-            const salePrice = parseFloat(raw.product_sale_price);
+            const stock = parseInt(raw.stock || raw.product_stock || '0', 10);
+            const unitCost = parseFloat(raw.product_unit_cost || raw.product_unitCost || '0');
+            const salePrice = parseFloat(raw.product_sale_price || raw.product_salePrice || '0');
             
-            // Cálculo del Break-Even Real en el backend
             const wasteRate = wasteRateMap.get(raw.product_id) || 0;
             const effectiveUnitCost = unitCost * (1 + wasteRate);
             const margin = salePrice - effectiveUnitCost;
@@ -124,12 +120,12 @@ export class ProductsService {
                 id: raw.product_id,
                 name: raw.product_name,
                 description: raw.product_description,
-                unitCost: parseFloat(raw.product_unit_cost),
-                salePrice: parseFloat(raw.product_sale_price),
-                isPerishable: raw.product_is_perishable,
-                shelfLifeDays: raw.product_shelf_life_days,
-                imageUrl: raw.product_image_url,
-                createdAt: raw.product_created_at,
+                unitCost: unitCost,
+                salePrice: salePrice,
+                isPerishable: raw.product_is_perishable || raw.product_isPerishable,
+                shelfLifeDays: raw.product_shelf_life_days || raw.product_shelfLifeDays,
+                imageUrl: raw.product_image_url || raw.product_imageUrl,
+                createdAt: raw.product_created_at || raw.product_createdAt,
                 category: raw.cat_id ? {
                     id: raw.cat_id,
                     name: raw.cat_name
@@ -194,18 +190,19 @@ export class ProductsService {
             qb.andWhere('(product.name ILIKE :query OR product.description ILIKE :query)', { query: `%${query}%` });
         }
 
-        // Count total before applying pagination (clone query without select/groupBy for count)
-        const countQb = this.productRepository.createQueryBuilder('product')
+        const totalCountQb = this.productRepository.createQueryBuilder('product')
             .innerJoin(
                 'inventory_records', 'inventory',
                 `inventory.product_id = product.id AND inventory.status = 'active' AND (inventory.expires_at IS NULL OR inventory.expires_at >= CURRENT_DATE)`
             )
             .where('product.isActive = :isActive', { isActive: true })
             .andWhere('inventory.quantity_remaining > 0');
-        if (sellerId) countQb.leftJoin('product.seller', 'seller').andWhere('seller.id = :sellerId', { sellerId });
-        if (category && category !== 'Todos') countQb.leftJoin('product.category', 'cat').andWhere('cat.name = :category', { category });
-        if (query) countQb.andWhere('(product.name ILIKE :query OR product.description ILIKE :query)', { query: `%${query}%` });
-        const total = await countQb.getCount();
+        
+        if (sellerId) totalCountQb.leftJoin('product.seller', 'seller').andWhere('seller.id = :sellerId', { sellerId });
+        if (category && category !== 'Todos') totalCountQb.leftJoin('product.category', 'cat').andWhere('cat.name = :category', { category });
+        if (query) totalCountQb.andWhere('(product.name ILIKE :query OR product.description ILIKE :query)', { query: `%${query}%` });
+        
+        const total = await totalCountQb.getCount();
 
         qb.offset((page - 1) * limit).limit(limit);
 
@@ -215,20 +212,20 @@ export class ProductsService {
             id: raw.product_id,
             name: raw.product_name,
             description: raw.product_description,
-            salePrice: parseFloat(raw.product_sale_price),
-            imageUrl: raw.product_image_url,
-            createdAt: raw.product_created_at,
+            salePrice: parseFloat(raw.product_sale_price || raw.product_salePrice || '0'),
+            imageUrl: raw.product_image_url || raw.product_imageUrl,
+            createdAt: raw.product_created_at || raw.product_createdAt,
             seller: {
                 id: raw.seller_id,
-                firstName: raw.seller_first_name,
-                lastName: raw.seller_last_name,
-                avatarUrl: raw.seller_avatar_url
+                firstName: raw.seller_first_name || raw.seller_firstName,
+                lastName: raw.seller_last_name || raw.seller_lastName,
+                avatarUrl: raw.seller_avatar_url || raw.seller_avatarUrl
             },
             category: {
-                id: raw.cat_id,
-                name: raw.cat_name
+                id: raw.cat_id || raw.category_id,
+                name: raw.cat_name || raw.category_name
             },
-            quantityRemaining: parseInt(raw.quantityRemaining, 10)
+            quantityRemaining: parseInt(raw.quantityRemaining || raw.quantityremaining || '0', 10)
         }));
 
         return { data, total, page, limit };
@@ -261,14 +258,14 @@ export class ProductsService {
     }
 
     async update(id: string, updateProductDto: UpdateProductDto, user: User): Promise<Product> {
-        const product = await this.findOne(id, user); // Ensure ownership exists
+        const product = await this.findOne(id, user);
         Object.assign(product, updateProductDto);
         return await this.productRepository.save(product);
     }
 
     async remove(id: string, user: User): Promise<void> {
         const product = await this.findOne(id, user);
-        product.isActive = false; // Soft delete
+        product.isActive = false;
         await this.productRepository.save(product);
     }
 }

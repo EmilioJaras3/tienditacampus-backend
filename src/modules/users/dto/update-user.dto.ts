@@ -24,4 +24,11 @@ export class UpdateUserDto {
     @IsString()
     @MaxLength(500)
     avatarUrl?: string;
+    @IsOptional()
+    @IsString()
+    @MaxLength(6)
+    twoFactorCode?: string | null;
+
+    @IsOptional()
+    twoFactorExpires?: Date | null;
 }
