@@ -13,11 +13,12 @@ import { TrackSaleDto } from './dto/track-sale.dto';
 import { CloseDayDto } from './dto/close-day.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
+import { BusinessHoursGuard } from '../../common/guards/business-hours.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { User } from '../users/entities/user.entity';
 
 @Controller('sales')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, BusinessHoursGuard)
 @Roles('seller', 'admin')
 export class SalesController {
     constructor(private readonly salesService: SalesService) { }

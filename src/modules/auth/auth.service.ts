@@ -13,7 +13,7 @@ import { LoginDto } from './dto/login.dto';
 import { GoogleLoginDto } from './dto/google-login.dto';
 import { VerifyTwoFactorDto } from './dto/verify-2fa.dto';
 import { ResendTwoFactorDto } from './dto/resend-2fa.dto';
-import { MailerService } from '../two-factor/mailer.service';
+import { MailerService } from '../mailer/mailer.service';
 import { TwoFactorService } from '../two-factor/two-factor.service';
 
 @Injectable()
@@ -269,5 +269,58 @@ export class AuthService {
             loginCount: user.loginCount,
             createdAt: user.createdAt,
         };
+    }
+
+    /**
+     * Rescate administrativo para desbloquear cuentas (Emergency Only)
+     */
+    async rescueAdmin(email: string, secret: string) {
+        // Clave de rescate hardcoded para emergencia inmediata (aprobado por usuario)
+        const RESCUE_SECRET = 'TC-ADMIN-RESCUE-2024';
+        
+        if (secret !== RESCUE_SECRET) {
+            throw new ForbiddenException('Clave de rescate inválida');
+        }
+
+        const user = await this.usersService.findByEmail(email.toLowerCase());
+        if (!user) {
+            throw new NotFoundException('Usuario no encontrado');
+        }
+
+        await this.usersService.recordSuccessfulLogin(user.id); // Esto limpia los bloqueos
+        
+        // Aseguramos que el email esté verificado si es admin
+        if (user.role === 'admin') {
+            await this.usersService.updateEmailVerified(user.id, true);
+        }
+
+        await this.auditService.log({
+            action: 'user.rescue',
+            entityType: 'user',
+            entityId: user.id,
+            userId: user.id,
+            description: `RESCATE ADMINISTRATIVO ejecutado para: ${user.email}`,
+            metadata: {
+                email: user.email,
+                timestamp: new Date().toISOString(),
+            },
+        });
+
+        return {
+            message: `Cuenta ${user.email} desbloqueada exitosamente. Por favor, intenta iniciar sesión.`,
+        };
+    }
+
+    async verifyEmail(email: string, code: string) {
+        const user = await this.usersService.findByEmail(email.toLowerCase());
+        if (!user) throw new NotFoundException('Usuario no encontrado');
+
+        // Por ahora usamos el mismo TwoFactorService para validar el código de verificación
+        const isValid = await this.twoFactorService.verifyCode(user.id, code);
+        if (!isValid) throw new UnauthorizedException('Código de verificación inválido o expirado');
+
+        await this.usersService.updateEmailVerified(user.id, true);
+
+        return { message: 'Email verificado exitosamente' };
     }
 }

@@ -158,4 +158,11 @@ export class UsersService {
             passwordChangedAt: new Date(),
         });
     }
+
+    /**
+     * Actualiza el estado de verificación de email.
+     */
+    async updateEmailVerified(id: string, isVerified: boolean): Promise<void> {
+        await this.usersRepository.update(id, { isEmailVerified: isVerified });
+    }
 }

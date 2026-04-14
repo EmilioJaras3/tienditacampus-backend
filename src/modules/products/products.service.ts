@@ -67,33 +67,43 @@ export class ProductsService {
                 'cat.name'
             ])
             .addSelect('COALESCE(SUM(inventory.quantity_remaining), 0)', 'stock')
-            .where('product.sellerId = :sellerId', { sellerId: user.id })
-            .andWhere('product.isActive = :isActive', { isActive: true })
+        if (user.role !== 'admin') {
+            qb.where('product.sellerId = :sellerId', { sellerId: user.id });
+        }
+        qb.andWhere('product.isActive = :isActive', { isActive: true })
+
             .groupBy('product.id')
             .addGroupBy('cat.id')
             .orderBy('product.createdAt', 'DESC');
 
-        const total = await this.productRepository.createQueryBuilder('product')
-            .where('product.sellerId = :sellerId', { sellerId: user.id })
-            .andWhere('product.isActive = :isActive', { isActive: true })
+        const totalQb = this.productRepository.createQueryBuilder('product');
+        if (user.role !== 'admin') {
+            totalQb.where('product.sellerId = :sellerId', { sellerId: user.id });
+        }
+        const total = await totalQb.andWhere('product.isActive = :isActive', { isActive: true })
             .getCount();
+
 
         qb.offset((page - 1) * limit).limit(limit);
 
         const rawResults = await qb.getRawMany();
 
-        const wasteRates = await this.productRepository.query(
-            `SELECT
+        const wasteRateQuery = `SELECT
                 sd.product_id,
                 COALESCE(SUM(sd.quantity_lost), 0)::int AS total_lost,
                 COALESCE(SUM(sd.quantity_sold + sd.quantity_lost), 0)::int AS total_handled
             FROM sale_details sd
             INNER JOIN daily_sales ds ON ds.id = sd.daily_sale_id
-            WHERE ds.seller_id = $1
+            WHERE 1=1
+              ${user.role === 'admin' ? '' : 'AND ds.seller_id = $1'}
               AND ds.sale_date >= (CURRENT_DATE - INTERVAL '30 days')
-            GROUP BY sd.product_id`,
-            [user.id]
+            GROUP BY sd.product_id`;
+
+        const wasteRates = await this.productRepository.query(
+            wasteRateQuery,
+            user.role === 'admin' ? [] : [user.id]
         );
+
 
         const wasteRateMap = new Map<string, number>();
         wasteRates.forEach((row: any) => {

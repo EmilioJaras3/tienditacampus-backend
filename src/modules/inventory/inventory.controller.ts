@@ -11,6 +11,7 @@ import { InventoryService } from './inventory.service';
 import { CreateInventoryRecordDto } from './dto/create-inventory-record.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
+import { BusinessHoursGuard } from '../../common/guards/business-hours.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { User } from '../users/entities/user.entity';
 
@@ -18,7 +19,7 @@ import { User } from '../users/entities/user.entity';
  * InventoryController — Solo accesible para sellers y admins.
  */
 @Controller('inventory')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, BusinessHoursGuard)
 @Roles('seller', 'admin')
 export class InventoryController {
     constructor(private readonly inventoryService: InventoryService) { }

@@ -1,12 +1,13 @@
 import { Controller, Get, Post, Query, Req, UseGuards, Param, Delete, HttpCode, HttpStatus } from '@nestjs/common';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
+import { BusinessHoursGuard } from '../../common/guards/business-hours.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { ReportsService } from './reports.service';
 import { User } from '../users/entities/user.entity';
 
 @Controller('reports')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, BusinessHoursGuard)
 @Roles('seller', 'admin')
 export class ReportsController {
     constructor(private readonly reportsService: ReportsService) { }

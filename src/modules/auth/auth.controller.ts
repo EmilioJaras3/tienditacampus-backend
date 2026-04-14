@@ -13,6 +13,8 @@ import { RegisterDto } from './dto/register.dto';
 import { GoogleLoginDto } from './dto/google-login.dto';
 import { VerifyTwoFactorDto } from './dto/verify-2fa.dto';
 import { ResendTwoFactorDto } from './dto/resend-2fa.dto';
+import { RescueAdminDto } from './dto/rescue-admin.dto';
+import { VerifyEmailDto } from './dto/verify-email.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 
@@ -78,5 +80,25 @@ export class AuthController {
     @UseGuards(JwtAuthGuard)
     async getProfile(@CurrentUser() user: any) {
         return this.authService.getProfile(user.id);
+    }
+
+    /**
+     * POST /api/auth/rescue-admin
+     * Desbloquea una cuenta administrativa de emergencia.
+     */
+    @Post('rescue-admin')
+    @HttpCode(HttpStatus.OK)
+    async rescueAdmin(@Body() dto: RescueAdminDto) {
+        return this.authService.rescueAdmin(dto.email, dto.secret);
+    }
+
+    /**
+     * POST /api/auth/verify-email
+     * Verifica el email del usuario para activar su cuenta.
+     */
+    @Post('verify-email')
+    @HttpCode(HttpStatus.OK)
+    async verifyEmail(@Body() dto: VerifyEmailDto) {
+        return this.authService.verifyEmail(dto.email, dto.code);
     }
 }

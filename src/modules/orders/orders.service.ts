@@ -279,8 +279,10 @@ export class OrdersService {
     }
 
     async getBuyerPurchases(buyer: User, page = 1, limit = 20) {
+        const where: any = buyer.role === 'admin' ? {} : { buyerId: buyer.id };
         const [data, total] = await this.orderRepo.findAndCount({
-            where: { buyerId: buyer.id },
+            where,
+
             relations: ['seller', 'items', 'items.product'],
             order: { createdAt: 'DESC' },
             skip: (page - 1) * limit,
@@ -290,8 +292,10 @@ export class OrdersService {
     }
 
     async getSellerSales(seller: User, page = 1, limit = 20) {
+        const where: any = seller.role === 'admin' ? {} : { sellerId: seller.id };
         const [data, total] = await this.orderRepo.findAndCount({
-            where: { sellerId: seller.id },
+            where,
+
             relations: ['buyer', 'items', 'items.product'],
             order: { createdAt: 'DESC' },
             skip: (page - 1) * limit,

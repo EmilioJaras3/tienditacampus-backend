@@ -1,15 +1,15 @@
 import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { AuditService } from './audit.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { RolesGuard } from '../../common/guards/roles.guard';
+import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 
 /**
  * AuditController — Endpoints para consultar los logs de auditoría (JSONB).
- *
- * Solo usuarios autenticados pueden ver logs.
  */
 @Controller('audit')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class AuditController {
     constructor(private readonly auditService: AuditService) { }
 
@@ -25,8 +25,10 @@ export class AuditController {
     /**
      * GET /api/audit/recent
      * Retorna los logs más recientes del sistema.
+     * Solo accesible por Administradores.
      */
     @Get('recent')
+    @Roles('admin')
     getRecent(@Query('limit') limit?: string) {
         return this.auditService.getRecent(limit ? parseInt(limit) : 50);
     }
@@ -36,6 +38,7 @@ export class AuditController {
      * Busca dentro de la metadata JSONB.
      */
     @Get('search')
+    @Roles('admin')
     searchByMetadata(
         @Query('key') key: string,
         @Query('value') value: string,
@@ -43,3 +46,4 @@ export class AuditController {
         return this.auditService.findByMetadataKey(key, value);
     }
 }
+

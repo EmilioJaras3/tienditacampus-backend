@@ -42,6 +42,23 @@ async function run() {
         console.log('🧹 Limpiando base de datos...');
         await AppDataSource.query('TRUNCATE order_items, orders, sale_details, daily_sales, products, users, categories CASCADE');
 
+        // 0.1 RECREAR ADMINISTRADOR MAESTRO
+        console.log('🔑 Recreando administrador maestro...');
+        const adminHash = '$argon2id$v=19$m=19456,t=2,p=1$BdrnHIP2j8L+weScYa0JYg$CxfF6czvoR/elsmrx8PltD1qNOiJPj5HRnrDbd61Aas';
+        const admin = userRepo.create({
+            email: 'jarassanchezl@gmail.com',
+            passwordHash: adminHash,
+            firstName: 'Jaras',
+            lastName: 'Sanchez',
+            role: 'admin',
+            isActive: true,
+            isEmailVerified: true,
+            campusLocation: 'Campus Principal',
+            major: 'Administración'
+        });
+        await userRepo.save(admin);
+
+
         // 1. Categorías
         const categoryNames = ['Comida Preparada', 'Bebidas', 'Snacks', 'Papelería'];
         const categoriesMap: Record<string, Category> = {};
