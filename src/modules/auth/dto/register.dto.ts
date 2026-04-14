@@ -64,8 +64,4 @@ export class RegisterDto {
     @IsOptional()
     @IsIn(['seller', 'buyer'], { message: 'El rol debe ser seller o buyer' })
     role?: 'seller' | 'buyer';
-
-    @IsOptional()
-    @IsBoolean()
-    acceptTerms?: boolean;
 }

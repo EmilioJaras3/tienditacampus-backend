@@ -5,20 +5,17 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { UsersModule } from '../users/users.module';
-import { AuditModule } from '../audit/audit.service.module' || '../audit/audit.module'; // Handle potential naming diffs
+import { AuditModule } from '../audit/audit.module';
 import { TwoFactorModule } from '../two-factor/two-factor.module';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { LoginUseCase } from './use-cases/login.use-case';
 import { RegisterUseCase } from './use-cases/register.use-case';
 import { GoogleLoginUseCase } from './use-cases/google-login.use-case';
 
-// Fixing the import based on actual file existence
-import { AuditModule as ActualAuditModule } from '../audit/audit.module';
-
 @Module({
     imports: [
         UsersModule,
-        ActualAuditModule,
+        AuditModule,
         TwoFactorModule,
         PassportModule.register({ defaultStrategy: 'jwt' }),
         JwtModule.registerAsync({
