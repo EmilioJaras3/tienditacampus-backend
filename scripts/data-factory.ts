@@ -147,15 +147,22 @@ async function run() {
                     const buyer = buyers[Math.floor(Math.random() * buyers.length)];
                     const qty = Math.floor(Math.random() * 2) + 1;
 
+                    // Randomized time during typical school hours (8:00 AM - 4:00 PM)
+                    const transactionTime = new Date(currentDay);
+                    const randomHour = Math.floor(Math.random() * 8) + 8; // 8 to 15
+                    const randomMinute = Math.floor(Math.random() * 60);
+                    const randomSecond = Math.floor(Math.random() * 60);
+                    transactionTime.setHours(randomHour, randomMinute, randomSecond);
+
                     const order = orderRepo.create({
                         buyerId: buyer.id, sellerId: seller.id, totalAmount: qty * Number(prod.salePrice),
-                        status: 'completed', createdAt: currentDay
+                        status: 'completed', createdAt: transactionTime
                     });
                     await orderRepo.save(order);
 
                     const orderItem = itemRepo.create({
                         orderId: order.id, productId: prod.id, quantity: qty,
-                        unitPrice: Number(prod.salePrice), subtotal: qty * Number(prod.salePrice), createdAt: currentDay
+                        unitPrice: Number(prod.salePrice), subtotal: qty * Number(prod.salePrice), createdAt: transactionTime
                     });
                     await itemRepo.save(orderItem);
 
@@ -165,7 +172,7 @@ async function run() {
                     const sDetail = detailRepo.create({
                         dailySaleId: daily.id, productId: prod.id, unitCost: Number(prod.unitCost),
                         unitPrice: Number(prod.salePrice), quantityPrepared: qty + lostQty,
-                        quantitySold: qty, quantityLost: lostQty, wasteCost: lostQty * Number(prod.unitCost), createdAt: currentDay
+                        quantitySold: qty, quantityLost: lostQty, wasteCost: lostQty * Number(prod.unitCost), createdAt: transactionTime
                     });
                     await detailRepo.save(sDetail);
 
