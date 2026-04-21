@@ -1,4 +1,4 @@
-# 🔧 Decisiones Técnicas y Troubleshooting — TienditaCampus
+#  Decisiones Técnicas y Troubleshooting — TienditaCampus
 
 > Registro de todas las decisiones de diseño, problemas encontrados y cómo se resolvieron. Sirve como guía para no repetir errores.
 
@@ -43,7 +43,7 @@
 
 ### 2.1 Backend health check falla
 ```
-❌ ERROR: wget: command not found
+ ERROR: wget: command not found
 ```
 **Causa:** La imagen `node:20-alpine` no incluye `wget` ni `curl`.
 **Solución:** Agregar en el Dockerfile del backend:
@@ -54,7 +54,7 @@ Y cambiar el health check a usar `wget --spider` (que sí está en Alpine por de
 
 ### 2.2 Frontend Dockerfile copia `.next/standalone`
 ```
-❌ COPY failed: stat /app/.next/standalone: file not found
+ COPY failed: stat /app/.next/standalone: file not found
 ```
 **Causa:** `next build` solo genera `standalone` si `next.config.mjs` tiene `output: 'standalone'`.
 **Solución:** Verificar que `next.config.mjs` contenga:
@@ -67,7 +67,7 @@ const nextConfig = {
 
 ### 2.3 PostgreSQL conflicto de puertos
 ```
-❌ port 5432 is already in use
+ port 5432 is already in use
 ```
 **Causa:** Otra instancia de PostgreSQL corre en la máquina local.
 **Solución:** No exponer el puerto 5432 de la base de datos al host. Solo los servicios dentro de la red Docker necesitan acceder a la BD. Si necesitas acceso local, mapear a otro puerto:
@@ -122,7 +122,7 @@ DELETE FROM users WHERE email='temp@mail.com';
 
 ### 4.1 `useForm` + `zodResolver` error de tipos
 ```
-❌ TS2322: Type 'ZodType<...>' is not assignable to type 'Resolver<...>'
+ TS2322: Type 'ZodType<...>' is not assignable to type 'Resolver<...>'
 ```
 **Causa:** Incompatibilidad de tipos entre `@hookform/resolvers/zod` y `react-hook-form` cuando se usa `z.coerce.number()` en el schema.
 
@@ -139,13 +139,13 @@ const form = useForm<FormValues>({
 
 ### 4.2 Falta `@radix-ui/react-checkbox`
 ```
-❌ Module not found: Can't resolve '@radix-ui/react-checkbox'
+ Module not found: Can't resolve '@radix-ui/react-checkbox'
 ```
 **Solución:** `npm install @radix-ui/react-checkbox` en el frontend.
 
 ### 4.3 Backend: `@nestjs/cli` no encontrado
 ```
-❌ Cannot find module '@nestjs/cli/bin/nest.js'
+ Cannot find module '@nestjs/cli/bin/nest.js'
 ```
 **Causa:** `@nestjs/cli` está instalado globalmente en la máquina local pero no como dependencia del proyecto.
 **Solución:** Usar `npx nest build` en vez de `nest build`, o agregar `@nestjs/cli` a `devDependencies`.
@@ -168,7 +168,7 @@ La tabla usa **snake_case** en PostgreSQL, pero TypeORM las mapea a **camelCase*
 | `failed_login_attempts` | `failedLoginAttempts` |
 | `locked_until` | `lockedUntil` |
 
-⚠️ **Al escribir SQL directo** contra la BD, usar snake_case. En el código TypeScript, usar camelCase.
+️ **Al escribir SQL directo** contra la BD, usar snake_case. En el código TypeScript, usar camelCase.
 
 ### 5.2 Extensiones requeridas
 ```sql

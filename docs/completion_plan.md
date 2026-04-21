@@ -1,8 +1,8 @@
-# Plan de Finalización del Proyecto TienditaCampus 🚀
+# Plan de Finalización del Proyecto TienditaCampus
 
 Este plan detalla los pasos para llevar el proyecto del estado actual (~60%) al 100% de cumplimiento con la especificación técnica.
 
-## 📅 Fase 1: Experiencia del Comprador (Prioridad Alta)
+##  Fase 1: Experiencia del Comprador (Prioridad Alta)
 *Esta fase habilita la parte pública de la plataforma, permitiendo que los estudiantes vean qué se vende.*
 
 ### HU-05: Catálogo Público
@@ -15,7 +15,7 @@ Este plan detalla los pasos para llevar el proyecto del estado actual (~60%) al 
 - [ ] **Frontend**: Crear vista dinámica `/seller/[id]`.
 - [ ] **Frontend**: Mostrar "Badge" de estado (Activo/Inactivo) basado en stock.
 
-## 📈 Fase 2: Inteligencia de Negocio (Prioridad Media)
+##  Fase 2: Inteligencia de Negocio (Prioridad Media)
 *Esta fase aporta el valor diferencial de "analítica" para el vendedor.*
 
 ### HU-02: Dashboard ROI Avanzado
@@ -27,7 +27,7 @@ Este plan detalla los pasos para llevar el proyecto del estado actual (~60%) al 
 - [ ] **Backend**: Implementar algoritmo IQR en `SalesService` para sugerir stock.
 - [ ] **Frontend**: Crear widget de alerta "Sugerencia del día" en el Dashboard.
 
-## 🛠️ Fase 3: Funcionalidades de Cierre y PWA (Prioridad Baja/Polish)
+## ️ Fase 3: Funcionalidades de Cierre y PWA (Prioridad Baja/Polish)
 *Refinamiento de flujos existentes.*
 
 ### HU-04: Cierre de Caja

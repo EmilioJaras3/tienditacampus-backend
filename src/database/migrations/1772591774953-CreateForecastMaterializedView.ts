@@ -1,13 +1,12 @@
 import { MigrationInterface, QueryRunner } from "typeorm";
 
 export class CreateForecastMaterializedView1772591774953 implements MigrationInterface {
-
-    public async up(queryRunner: QueryRunner): Promise<void> {
-        await queryRunner.query(`
+  public async up(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.query(`
             CREATE MATERIALIZED VIEW vw_daily_production_forecast AS
             WITH daily_stats AS (
                 -- Primero obtenemos las estadísticas diarias de ventas por producto
-                SELECT 
+                SELECT
                     ds.sale_date,
                     EXTRACT(ISODOW FROM ds.sale_date) as day_of_week,
                     sd.product_id,
@@ -22,11 +21,11 @@ export class CreateForecastMaterializedView1772591774953 implements MigrationInt
             ),
             calculated_demand AS (
                 -- Calculamos la demanda real estimada
-                SELECT 
+                SELECT
                     sale_date,
                     day_of_week,
                     product_id,
-                    CASE 
+                    CASE
                         WHEN inventory_status = 'sold_out' THEN quantity_sold * 1.25 -- Ajuste empírico
                         WHEN quantity_lost > 0 THEN quantity_sold
                         ELSE quantity_sold -- Demanda cubierta
@@ -35,7 +34,7 @@ export class CreateForecastMaterializedView1772591774953 implements MigrationInt
             ),
             ranked_demand AS (
                 -- Numeramos las observaciones por producto y día de la semana (1 = más reciente)
-                SELECT 
+                SELECT
                     product_id,
                     day_of_week,
                     estimated_demand,
@@ -43,7 +42,7 @@ export class CreateForecastMaterializedView1772591774953 implements MigrationInt
                 FROM calculated_demand
             )
             -- Finalmente calculamos el EWMA modificado (40%, 30%, 20%, 10%)
-            SELECT 
+            SELECT
                 product_id,
                 day_of_week,
                 FLOOR(
@@ -55,7 +54,7 @@ export class CreateForecastMaterializedView1772591774953 implements MigrationInt
                             WHEN 4 THEN estimated_demand * 0.10
                             ELSE 0
                         END
-                    ) / 
+                    ) /
                     -- Normalización en caso de que no hayan pasado las 4 semanas completas para ese día
                     NULLIF(SUM(
                         CASE recency_rank
@@ -72,14 +71,15 @@ export class CreateForecastMaterializedView1772591774953 implements MigrationInt
             GROUP BY product_id, day_of_week;
         `);
 
-        // Crear un índice único necesario para refrescar la vista CONCURRENTLY
-        await queryRunner.query(`
-            CREATE UNIQUE INDEX idx_forecast_product_day 
+    await queryRunner.query(`
+            CREATE UNIQUE INDEX idx_forecast_product_day
             ON vw_daily_production_forecast(product_id, day_of_week);
         `);
-    }
+  }
 
-    public async down(queryRunner: QueryRunner): Promise<void> {
-        await queryRunner.query(`DROP MATERIALIZED VIEW IF EXISTS vw_daily_production_forecast;`);
-    }
+  public async down(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.query(
+      `DROP MATERIALIZED VIEW IF EXISTS vw_daily_production_forecast;`,
+    );
+  }
 }

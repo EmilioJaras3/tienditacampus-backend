@@ -1,0 +1,48 @@
+[32m[Nest] 38260  - [39m10/04/2026, 10:21:15 p.m. [32m    LOG[39m [38;5;3m[NestFactory] [39m[32mStarting Nest application...[39m
+[32m[Nest] 38260  - [39m10/04/2026, 10:21:15 p.m. [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +19ms[39m
+[32m[Nest] 38260  - [39m10/04/2026, 10:21:15 p.m. [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mPassportModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 38260  - [39m10/04/2026, 10:21:15 p.m. [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAppModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 38260  - [39m10/04/2026, 10:21:15 p.m. [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mConfigHostModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 38260  - [39m10/04/2026, 10:21:15 p.m. [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mDiscoveryModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 38260  - [39m10/04/2026, 10:21:15 p.m. [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mConfigModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 38260  - [39m10/04/2026, 10:21:15 p.m. [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mConfigModule dependencies initialized[39m[38;5;3m +0ms[39m
+NEST DB CONFIG: {
+  host: '127.0.0.1',
+  port: 5434,
+  database: 'tienditacampus',
+  username: 'tc_admin',
+  passwordLength: 21
+}
+[32m[Nest] 38260  - [39m10/04/2026, 10:21:15 p.m. [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mScheduleModule dependencies initialized[39m[38;5;3m +1ms[39m
+[33m[Nest] 38260  - [39m10/04/2026, 10:21:15 p.m. [33m   WARN[39m [38;5;3m[MailerService] [39m[33mVariables SMTP no configuradas ÔÇö los c├│digos 2FA se imprimir├ín en consola[39m
+[32m[Nest] 38260  - [39m10/04/2026, 10:21:15 p.m. [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mJwtModule dependencies initialized[39m[38;5;3m +28ms[39m
+[Nest] 38260  - 10/04/2026, 10:21:15 p.m.   ERROR [TypeOrmModule] Unable to connect to the database. Retrying (1)...
+Error: connect ECONNREFUSED 127.0.0.1:5434
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+[Nest] 38260  - 10/04/2026, 10:21:18 p.m.   ERROR [TypeOrmModule] Unable to connect to the database. Retrying (2)...
+Error: connect ECONNREFUSED 127.0.0.1:5434
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+[Nest] 38260  - 10/04/2026, 10:21:21 p.m.   ERROR [TypeOrmModule] Unable to connect to the database. Retrying (3)...
+Error: connect ECONNREFUSED 127.0.0.1:5434
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+[Nest] 38260  - 10/04/2026, 10:21:24 p.m.   ERROR [TypeOrmModule] Unable to connect to the database. Retrying (4)...
+Error: connect ECONNREFUSED 127.0.0.1:5434
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+[Nest] 38260  - 10/04/2026, 10:21:27 p.m.   ERROR [TypeOrmModule] Unable to connect to the database. Retrying (5)...
+Error: connect ECONNREFUSED 127.0.0.1:5434
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+[Nest] 38260  - 10/04/2026, 10:21:30 p.m.   ERROR [TypeOrmModule] Unable to connect to the database. Retrying (6)...
+Error: connect ECONNREFUSED 127.0.0.1:5434
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+[Nest] 38260  - 10/04/2026, 10:21:33 p.m.   ERROR [TypeOrmModule] Unable to connect to the database. Retrying (7)...
+Error: connect ECONNREFUSED 127.0.0.1:5434
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+[Nest] 38260  - 10/04/2026, 10:21:36 p.m.   ERROR [TypeOrmModule] Unable to connect to the database. Retrying (8)...
+Error: connect ECONNREFUSED 127.0.0.1:5434
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+[Nest] 38260  - 10/04/2026, 10:21:39 p.m.   ERROR [TypeOrmModule] Unable to connect to the database. Retrying (9)...
+Error: connect ECONNREFUSED 127.0.0.1:5434
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+[Nest] 38260  - 10/04/2026, 10:21:39 p.m.   ERROR [ExceptionHandler] connect ECONNREFUSED 127.0.0.1:5434
+Error: connect ECONNREFUSED 127.0.0.1:5434
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)

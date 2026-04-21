@@ -1,50 +1,52 @@
 import {
-    Entity,
-    PrimaryGeneratedColumn,
-    Column,
-    CreateDateColumn,
-    UpdateDateColumn,
-    ManyToOne,
-    JoinColumn,
-    OneToMany,
-} from 'typeorm';
-import { User } from '../../users/entities/user.entity';
-import { OrderItem } from './order-item.entity';
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  ManyToOne,
+  JoinColumn,
+  OneToMany,
+} from "typeorm";
+import { User } from "../../users/entities/user.entity";
+import { OrderItem } from "./order-item.entity";
 
-@Entity('orders')
+@Entity("orders")
 export class Order {
-    @PrimaryGeneratedColumn('uuid')
-    id: string;
+  @PrimaryGeneratedColumn("uuid")
+  id: string;
 
-    @Column({ name: 'buyer_id' })
-    buyerId: string;
+  @Column({ name: "buyer_id" })
+  buyerId: string;
 
-    @ManyToOne(() => User)
-    @JoinColumn({ name: 'buyer_id' })
-    buyer: User;
+  @ManyToOne(() => User)
+  @JoinColumn({ name: "buyer_id" })
+  buyer: User;
 
-    @Column({ name: 'seller_id' })
-    sellerId: string;
+  @Column({ name: "seller_id" })
+  sellerId: string;
 
-    @ManyToOne(() => User)
-    @JoinColumn({ name: 'seller_id' })
-    seller: User;
+  @ManyToOne(() => User)
+  @JoinColumn({ name: "seller_id" })
+  seller: User;
 
-    @Column({ type: 'decimal', precision: 10, scale: 2, name: 'total_amount' })
-    totalAmount: number;
+  @Column({ type: "decimal", precision: 10, scale: 2, name: "total_amount" })
+  totalAmount: number;
 
-    @Column({ type: 'varchar', default: 'requested' })
-    status: string; // 'requested', 'pending', 'completed', 'cancelled', 'rejected'
+  @Column({ type: "varchar", default: "requested" })
+  status: string;
 
-    @Column({ type: 'text', nullable: true, name: 'delivery_message' })
-    deliveryMessage: string | null;
+  @Column({ type: "text", nullable: true, name: "delivery_message" })
+  deliveryMessage: string | null;
 
-    @OneToMany(() => OrderItem, (item: OrderItem) => item.order, { cascade: true })
-    items: OrderItem[];
+  @OneToMany(() => OrderItem, (item: OrderItem) => item.order, {
+    cascade: true,
+  })
+  items: OrderItem[];
 
-    @CreateDateColumn({ type: 'timestamptz', name: 'created_at' })
-    createdAt: Date;
+  @CreateDateColumn({ type: "timestamptz", name: "created_at" })
+  createdAt: Date;
 
-    @UpdateDateColumn({ type: 'timestamptz', name: 'updated_at' })
-    updatedAt: Date;
+  @UpdateDateColumn({ type: "timestamptz", name: "updated_at" })
+  updatedAt: Date;
 }

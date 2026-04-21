@@ -1,19 +1,26 @@
-import { IsNotEmpty, IsNumber, IsUUID, Min, IsOptional, IsDateString } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsNumber,
+  IsUUID,
+  Min,
+  IsOptional,
+  IsDateString,
+} from "class-validator";
 
 export class CreateInventoryRecordDto {
-    @IsUUID()
-    @IsNotEmpty()
-    productId: string;
+  @IsUUID()
+  @IsNotEmpty()
+  productId: string;
 
-    @IsNumber()
-    @Min(1)
-    quantity: number;
+  @IsNumber()
+  @Min(1)
+  quantity: number;
 
-    @IsNumber()
-    @Min(0)
-    unitCost: number; // Important to calculate total investment and track cost changes
+  @IsNumber()
+  @Min(0)
+  unitCost: number;
 
-    @IsDateString()
-    @IsOptional()
-    recordDate?: string;
+  @IsDateString()
+  @IsOptional()
+  recordDate?: string;
 }

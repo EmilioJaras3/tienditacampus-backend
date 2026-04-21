@@ -1,4 +1,4 @@
-# 🧠 Contexto del Proyecto — TienditaCampus
+#  Contexto del Proyecto — TienditaCampus
 
 > Documento maestro de referencia. Aquí está TODO lo que necesitas saber para continuar trabajando en el proyecto, sin perder contexto.
 
@@ -8,11 +8,11 @@
 
 **TienditaCampus** es un sistema web de gestión de ventas diseñado para estudiantes universitarios que venden productos dentro del campus (snacks, bebidas, comida, etc.). Funciona como un **micro-ERP + Marketplace** que permite:
 
-- 📦 Gestionar productos e inventario
-- 💰 Rastrear ventas diarias en tiempo real
-- 📊 Calcular ROI y rentabilidad
-- 🏪 Publicar un catálogo público para compradores
-- 📱 Funcionar como PWA (Progressive Web App) para uso en celular
+-  Gestionar productos e inventario
+-  Rastrear ventas diarias en tiempo real
+-  Calcular ROI y rentabilidad
+-  Publicar un catálogo público para compradores
+-  Funcionar como PWA (Progressive Web App) para uso en celular
 
 ---
 
@@ -59,7 +59,7 @@ docker compose up --build
 # Terminal 1 — Backend
 cd backend && npm install && npm run start:dev
 
-# Terminal 2 — Frontend  
+# Terminal 2 — Frontend
 cd frontend && npm install && npm run dev
 ```
 
@@ -69,7 +69,7 @@ cd frontend && npm install && npm run dev
 | `243697@ids.upchiapas.edu.mx` | `TienditaCampus2026!` | seller |
 | `testadmin@upchiapas.edu.mx` | `TienditaCampus2026!` | admin |
 
-> ⚠️ Si el login falla con error 500 "Invalid hash", es porque el hash en la BD está corrupto. La solución es registrar un usuario nuevo vía `/api/auth/register` y copiar su `password_hash` al usuario afectado.
+> ️ Si el login falla con error 500 "Invalid hash", es porque el hash en la BD está corrupto. La solución es registrar un usuario nuevo vía `/api/auth/register` y copiar su `password_hash` al usuario afectado.
 
 ---
 
@@ -203,7 +203,7 @@ NGINX_HTTP_PORT=8080
 
 ## 10. Problemas Conocidos y Soluciones
 
-### ❌ Login devuelve 500 "Invalid hashed password"
+###  Login devuelve 500 "Invalid hashed password"
 **Causa:** Hash Argon2 corrupto en la BD (caracteres `$` escapados incorrectamente al insertar manualmente).
 **Solución:**
 1. Registrar un usuario temporal: `POST /api/auth/register`
@@ -214,15 +214,15 @@ UPDATE users SET password_hash = (
 ) WHERE email='usuario_real@mail.com';
 ```
 
-### ❌ Docker build del frontend falla por TypeScript
+###  Docker build del frontend falla por TypeScript
 **Causa:** `useForm` con `zodResolver` da error de tipos complejos.
 **Solución:** Usar `zodResolver(schema) as any` en los formularios.
 
-### ❌ `nest build` falla localmente
+###  `nest build` falla localmente
 **Causa:** `@nestjs/cli` no instalado localmente.
 **Solución:** `npm install @nestjs/cli --save-dev` o usar `npx nest build`.
 
-### ❌ Docker Compose health checks fallan
+###  Docker Compose health checks fallan
 **Causa:** `wget`/`curl` no disponible en imagen Alpine.
 **Solución:** Agregar `RUN apk add --no-cache curl` en el Dockerfile.
 
@@ -246,10 +246,10 @@ UPDATE users SET password_hash = (
 
 | Actividad | Archivo | Estado |
 |-----------|---------|--------|
-| ACT4-C2: Arquitectura SOA | `ACT4-C2_ARQUITECTURA_SOA.md` | ✅ Completado |
-| Diagrama de Arquitectura | Incluido en ACT4-C2 | ✅ Completado |
-| Contrato de API (endpoints) | Incluido en ACT4-C2 | ✅ Completado |
-| 3 Repositorios de GitHub | Frontend, Backend, Database | ✅ Completados |
-| Estrategia de Despliegue | Incluido en ACT4-C2 | ✅ Completado |
+| ACT4-C2: Arquitectura SOA | `ACT4-C2_ARQUITECTURA_SOA.md` |  Completado |
+| Diagrama de Arquitectura | Incluido en ACT4-C2 |  Completado |
+| Contrato de API (endpoints) | Incluido en ACT4-C2 |  Completado |
+| 3 Repositorios de GitHub | Frontend, Backend, Database |  Completados |
+| Estrategia de Despliegue | Incluido en ACT4-C2 |  Completado |
 
 ---

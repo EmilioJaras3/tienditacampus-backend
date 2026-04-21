@@ -1,32 +1,48 @@
-import { IsString, IsNotEmpty, IsNumber, IsOptional, IsBoolean, Min } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsBoolean,
+  Min,
+  IsUUID,
+} from "class-validator";
 
 export class CreateProductDto {
-    @IsString()
-    @IsNotEmpty()
-    name: string;
+  @IsString()
+  @IsNotEmpty()
+  name: string;
 
-    @IsString()
-    @IsOptional()
-    description?: string;
+  @IsString()
+  @IsOptional()
+  description?: string;
 
-    @IsNumber()
-    @Min(0)
-    unitCost: number;
+  @IsNumber()
+  @Min(0)
+  unitCost: number;
 
-    @IsNumber()
-    @Min(0)
-    salePrice: number;
+  @IsNumber()
+  @Min(0)
+  salePrice: number;
 
-    @IsBoolean()
-    @IsOptional()
-    isPerishable?: boolean;
+  @IsBoolean()
+  @IsOptional()
+  isPerishable?: boolean;
 
-    @IsNumber()
-    @IsOptional()
-    @Min(0)
-    shelfLifeDays?: number;
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  shelfLifeDays?: number;
 
-    @IsString()
-    @IsOptional()
-    imageUrl?: string;
+  @IsString()
+  @IsOptional()
+  imageUrl?: string;
+
+  @IsUUID()
+  @IsNotEmpty()
+  categoryId: string;
+
+  @IsString()
+  @IsOptional()
+  subcategory?: string;
 }

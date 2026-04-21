@@ -1,363 +1,59 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource } from 'typeorm';
-import { DailySale } from './entities/daily-sale.entity';
-import { SaleDetail } from './entities/sale-detail.entity';
-import { Product } from '../products/entities/product.entity';
-import { PrepareDailySaleDto } from './dto/prepare-daily-sale.dto';
-import { TrackSaleDto } from './dto/track-sale.dto';
-import { User } from '../users/entities/user.entity';
-import { InventoryRecord } from '../inventory/entities/inventory-record.entity';
+import { Injectable } from "@nestjs/common";
+import { User } from "../users/entities/user.entity";
+import { PrepareDailySaleDto } from "./dto/prepare-daily-sale.dto";
+import { TrackSaleDto } from "./dto/track-sale.dto";
+import { SalesRepository } from "./repositories/sales.repository";
+import { CreateDailySaleUseCase } from "./use-cases/create-daily-sale.use-case";
+import { CloseDayUseCase } from "./use-cases/close-day.use-case";
+import { TrackSaleUseCase } from "./use-cases/track-sale.use-case";
+import { ForecastService } from "../forecast/forecast.service";
 
 @Injectable()
 export class SalesService {
-    constructor(
-        @InjectRepository(DailySale)
-        private readonly dailySaleRepository: Repository<DailySale>,
-        @InjectRepository(SaleDetail)
-        private readonly saleDetailRepository: Repository<SaleDetail>,
-        @InjectRepository(Product)
-        private readonly productRepository: Repository<Product>,
-        private readonly dataSource: DataSource,
-    ) { }
+  constructor(
+    private readonly salesRepository: SalesRepository,
+    private readonly createDailySaleUseCase: CreateDailySaleUseCase,
+    private readonly closeDayUseCase: CloseDayUseCase,
+    private readonly trackSaleUseCase: TrackSaleUseCase,
+    private readonly forecastService: ForecastService,
+  ) {}
 
-    // Predicción de ventas basada en IQR
-    async getPrediction(user: User): Promise<any> {
-        // Obtenemos el día de la semana actual (0-6)
-        const today = new Date().getDay();
+  async getPrediction(user: User): Promise<any> {
+    return this.forecastService.getUserPredictionSummary(user);
+  }
 
-        // Ventas históricas para este usuario y día
-        const history = await this.dailySaleRepository.query(`
-            SELECT 
-                sd.product_id, 
-                p.name as product_name,
-                sd.quantity_sold
-            FROM sale_details sd
-            INNER JOIN daily_sales ds ON ds.id = sd.daily_sale_id
-            INNER JOIN products p ON p.id = sd.product_id
-            WHERE ds.seller_id = $1 
-            AND EXTRACT(DOW FROM ds.sale_date) = $2
-            AND ds.sale_date < CURRENT_DATE -- Exclude today
-            ORDER BY sd.product_id, ds.sale_date DESC
-            LIMIT 100
-        `, [user.id, today]);
+  async closeDay(
+    user: User,
+    wastes: {
+      productId: string;
+      waste: number;
+      wasteReason?: "expired" | "damaged" | "other";
+    }[],
+  ): Promise<any> {
+    return await this.closeDayUseCase.execute(user, wastes);
+  }
 
-        // Agrupación por producto
-        const productSales: Record<string, number[]> = {};
-        const productNames: Record<string, string> = {};
+  async findToday(user: User): Promise<any | null> {
+    return await this.salesRepository.findToday(user.id);
+  }
 
-        history.forEach((row: any) => {
-            if (!productSales[row.product_id]) {
-                productSales[row.product_id] = [];
-                productNames[row.product_id] = row.product_name;
-            }
-            productSales[row.product_id].push(Number(row.quantity_sold));
-        });
+  async prepareDay(prepareDto: PrepareDailySaleDto, user: User): Promise<any> {
+    return await this.createDailySaleUseCase.execute(prepareDto, user);
+  }
 
-        // Cálculo de estadísticas
-        const suggestions = Object.keys(productSales).map(productId => {
-            const sales = productSales[productId];
-            if (sales.length < 3) return null; // Not enough data
+  async trackProduct(trackDto: TrackSaleDto, user: User): Promise<any> {
+    return await this.trackSaleUseCase.execute(trackDto, user);
+  }
 
-            // IQR Logic
-            sales.sort((a, b) => a - b);
-            const q1 = sales[Math.floor((sales.length / 4))];
-            const q3 = sales[Math.floor((sales.length * (3 / 4)))];
-            const iqr = q3 - q1;
-            const lower = q1 - 1.5 * iqr;
-            const upper = q3 + 1.5 * iqr;
+  async getROI(user: User) {
+    return await this.salesRepository.getROI(user.id);
+  }
 
-            const filtered = sales.filter(x => x >= lower && x <= upper);
-            const avg = filtered.reduce((a, b) => a + b, 0) / filtered.length;
+  async getHistory(user: User, page = 1, limit = 20) {
+    return await this.salesRepository.getHistory(user.id, page, limit);
+  }
 
-            return {
-                productId,
-                productName: productNames[productId],
-                suggested: Math.ceil(avg),
-                confidence: filtered.length / sales.length // simplistic confidence
-            };
-        }).filter(x => x !== null);
-
-        // Retornar sugerencia principal
-        return suggestions.length > 0 ? suggestions[0] : null;
-    }
-
-    // Cierre de jornada
-    async closeDay(user: User, wastes: { productId: string; waste: number }[]) {
-        const dailySale = await this.findToday(user);
-        if (!dailySale) throw new NotFoundException('No hay venta abierta hoy');
-        if (dailySale.isClosed) throw new BadRequestException('El día ya está cerrado');
-
-        for (const item of wastes) {
-            const detail = dailySale.details.find(d => d.productId === item.productId);
-            if (detail) {
-                const waste = Number(item.waste);
-                if (waste > detail.quantityPrepared) {
-                    throw new BadRequestException(`Merma (${waste}) no puede exceder preparado (${detail.quantityPrepared}) para ${detail.product.name}`);
-                }
-
-                detail.quantityLost = waste;
-                detail.quantitySold = detail.quantityPrepared - waste;
-                await this.saleDetailRepository.save(detail);
-
-                // Update inventory record (HU-04 fix)
-                const activeInventory = await this.dataSource.getRepository(InventoryRecord).findOne({
-                    where: {
-                        productId: item.productId,
-                        sellerId: user.id,
-                        status: 'active'
-                    }
-                });
-
-                if (activeInventory) {
-                    activeInventory.quantityRemaining = 0;
-                    if (detail.product.isPerishable) {
-                        activeInventory.status = 'expired';
-                    } else {
-                        // Or 'closed' to signify end of day regardless 
-                        activeInventory.status = 'closed';
-                    }
-                    await this.dataSource.getRepository(InventoryRecord).save(activeInventory);
-                }
-            }
-        }
-
-        dailySale.isClosed = true;
-        await this.dailySaleRepository.save(dailySale);
-
-        return this.recalculateHeader(dailySale.id);
-    }
-
-    // Busca el registro de ventas de hoy para el usuario
-    async findToday(user: User): Promise<DailySale | null> {
-        return await this.dailySaleRepository.findOne({
-            where: {
-                sellerId: user.id,
-                saleDate: new Date().toISOString().split('T')[0],
-            },
-            relations: ['details', 'details.product'],
-        });
-    }
-
-    // Inicializa un nuevo registro de ventas diarias
-    async prepareDay(prepareDto: PrepareDailySaleDto, user: User): Promise<DailySale> {
-        const existing = await this.findToday(user);
-        if (existing) {
-            throw new BadRequestException('Daily sale already initialized for today. Use update methods instead.');
-        }
-
-        const queryRunner = this.dataSource.createQueryRunner();
-        await queryRunner.connect();
-        await queryRunner.startTransaction();
-
-        try {
-            // 1. Calculate Initial Investment
-            let totalInvestment = 0;
-            const details: SaleDetail[] = [];
-
-            for (const item of prepareDto.items) {
-                const product = await this.productRepository.findOneBy({ id: item.productId });
-                if (!product) throw new BadRequestException(`Product ${item.productId} not found`);
-
-                const detail = new SaleDetail();
-                detail.product = product;
-                detail.productId = product.id;
-                detail.quantityPrepared = item.quantityPrepared;
-                detail.unitCost = product.unitCost;
-                detail.unitPrice = product.salePrice;
-
-                totalInvestment += Number(product.unitCost) * item.quantityPrepared;
-                details.push(detail);
-            }
-
-            // 2. Create Header
-            const dailySale = new DailySale();
-            dailySale.seller = user;
-            dailySale.sellerId = user.id;
-            dailySale.totalInvestment = totalInvestment;
-            dailySale.saleDate = new Date().toISOString().split('T')[0];
-
-            const savedSale = await queryRunner.manager.save(DailySale, dailySale);
-
-            // 3. Save Details
-            for (const detail of details) {
-                detail.dailySale = savedSale;
-                await queryRunner.manager.save(SaleDetail, detail);
-            }
-
-            await queryRunner.commitTransaction();
-
-            // Return with relations
-            const result = await this.dailySaleRepository.findOne({
-                where: { id: savedSale.id },
-                relations: ['details', 'details.product'],
-            });
-
-            if (!result) throw new NotFoundException('Error saving sale');
-            return result;
-
-        } catch (err) {
-            await queryRunner.rollbackTransaction();
-            throw err;
-        } finally {
-            await queryRunner.release();
-        }
-    }
-
-    // Actualiza cantidades vendidas/perdidas para un producto
-    async trackProduct(trackDto: TrackSaleDto, user: User): Promise<DailySale> {
-        const dailySale = await this.findToday(user);
-        if (!dailySale) {
-            throw new NotFoundException('No active daily sale found for today. Please initialize the day first.');
-        }
-
-        const detail = dailySale.details.find(d => d.productId === trackDto.productId);
-        if (!detail) {
-            // Optional: Auto-add logic if product wasn't prepared? For now, throw error.
-            throw new NotFoundException('Product not found in today\'s records');
-        }
-
-        // Validate
-        if (detail.quantityPrepared < (trackDto.quantitySold + trackDto.quantityLost)) {
-            throw new BadRequestException('Cannot sell/lose more than prepared quantity');
-        }
-
-        // Update Detail
-        detail.quantitySold = trackDto.quantitySold;
-        detail.quantityLost = trackDto.quantityLost;
-        await this.saleDetailRepository.save(detail);
-
-        // Recalculate Header Stats (Revenue, Units)
-        // Note: total_profit and subtotal are DB generated/stored, but let's update aggregated fields in app logic too if needed for immediate response
-        return await this.recalculateHeader(dailySale.id);
-    }
-
-    private async recalculateHeader(dailySaleId: string): Promise<DailySale> {
-        const sale = await this.dailySaleRepository.findOne({
-            where: { id: dailySaleId },
-            relations: ['details']
-        });
-
-        if (!sale) throw new NotFoundException('Sale not found');
-
-        let totalRevenue = 0;
-        let unitsSold = 0;
-        let unitsLost = 0;
-        let totalWasteCost = 0;
-
-        for (const detail of sale.details) {
-            totalRevenue += Number(detail.unitPrice) * detail.quantitySold;
-            unitsSold += detail.quantitySold;
-            unitsLost += detail.quantityLost;
-            totalWasteCost += Number(detail.wasteCost || 0); // Include generated column if available
-        }
-
-        sale.totalRevenue = totalRevenue;
-        sale.unitsSold = unitsSold;
-        sale.unitsLost = unitsLost;
-        sale.totalWasteCost = totalWasteCost;
-
-        // Profit & Margin
-        const profit = totalRevenue - Number(sale.totalInvestment);
-        sale.profitMargin = totalRevenue > 0 ? (profit / totalRevenue) * 100 : 0;
-
-        await this.dailySaleRepository.save(sale);
-
-        await this.dailySaleRepository.update(sale.id, {
-            totalRevenue: sale.totalRevenue,
-            unitsSold: sale.unitsSold,
-            unitsLost: sale.unitsLost,
-            totalWasteCost: sale.totalWasteCost,
-            profitMargin: sale.profitMargin
-        });
-
-        return sale;
-    }
-
-    async getROI(user: User, startDate?: string, endDate?: string) {
-        let qs = this.dailySaleRepository
-            .createQueryBuilder('sale')
-            .select('SUM(sale.totalInvestment)', 'sum_invest')
-            .addSelect('SUM(sale.totalRevenue)', 'sum_revenue')
-            .where('sale.sellerId = :sellerId', { sellerId: user.id });
-
-        if (startDate) {
-            qs = qs.andWhere('sale.saleDate >= :startDate', { startDate });
-        }
-        if (endDate) {
-            qs = qs.andWhere('sale.saleDate <= :endDate', { endDate });
-        }
-
-        const { sum_invest, sum_revenue } = await qs.getRawOne();
-
-        const investment = Number(sum_invest || 0);
-        const revenue = Number(sum_revenue || 0);
-        const netProfit = revenue - investment;
-        const roi = investment > 0 ? (netProfit / investment) * 100 : 0;
-
-        return {
-            investment,
-            revenue,
-            netProfit,
-            roi: Number(roi.toFixed(2))
-        };
-    }
-
-    async getHistory(user: User) {
-        return await this.dailySaleRepository.find({
-            where: { sellerId: user.id },
-            order: { saleDate: 'ASC' },
-            take: 30 // Last 30 days
-        });
-    }
-
-    async getByWeekdayAnalytics(user: User, startDate?: string, endDate?: string) {
-        const params: Array<string> = [user.id];
-        let where = 'WHERE ds.seller_id = $1';
-
-        if (startDate) {
-            params.push(startDate);
-            where += ` AND ds.sale_date >= $${params.length}`;
-        }
-
-        if (endDate) {
-            params.push(endDate);
-            where += ` AND ds.sale_date <= $${params.length}`;
-        }
-
-        const rows = await this.dailySaleRepository.query(
-            `
-            SELECT
-                EXTRACT(DOW FROM ds.sale_date)::int AS weekday,
-                COUNT(*)::int AS days_count,
-                COALESCE(SUM(ds.total_revenue), 0)::numeric(12,2) AS revenue_sum,
-                COALESCE(SUM(ds.units_sold), 0)::int AS units_sold_sum,
-                COALESCE(AVG(ds.total_revenue), 0)::numeric(12,2) AS revenue_avg
-            FROM daily_sales ds
-            ${where}
-            GROUP BY EXTRACT(DOW FROM ds.sale_date)
-            ORDER BY weekday ASC
-            `,
-            params,
-        );
-
-        const weekdayName: Record<number, string> = {
-            0: 'domingo',
-            1: 'lunes',
-            2: 'martes',
-            3: 'miercoles',
-            4: 'jueves',
-            5: 'viernes',
-            6: 'sabado',
-        };
-
-        return rows.map((row: any) => ({
-            weekday: Number(row.weekday),
-            weekdayName: weekdayName[Number(row.weekday)] ?? 'desconocido',
-            daysCount: Number(row.days_count),
-            revenueSum: row.revenue_sum,
-            unitsSoldSum: Number(row.units_sold_sum),
-            revenueAvg: row.revenue_avg,
-        }));
-    }
+  async getByWeekdayAnalytics(user: User) {
+    return await this.salesRepository.getByWeekdayAnalytics(user.id);
+  }
 }

@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: tc-prod-backend
+    restart: always
+    ports:
+      - "3001:3001"
+    environment:
+      - POSTGRES_HOST=${POSTGRES_HOST:-tc-prod-postgres}
+      - POSTGRES_PORT=${POSTGRES_PORT:-5432}
+      - POSTGRES_DB=${POSTGRES_DB:-tienditacampus}
+      - POSTGRES_USER=${POSTGRES_USER:-tc_admin}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-TienditaCampus2026DB!}
+      - NODE_ENV=production
+      - BACKEND_PORT=3001
+      - JWT_SECRET=${JWT_SECRET:-fallback_secret_key_12345}
+      - JWT_EXPIRATION=7d
+      - BCRYPT_SALT_ROUNDS=12
+      - ARGON2_MEMORY_COST=19456
+      - ARGON2_TIME_COST=2
+      - ARGON2_PARALLELISM=1
+    networks:
+      - tc-network
+
+networks:
+  tc-network:
+    name: tc-network
+    external: true

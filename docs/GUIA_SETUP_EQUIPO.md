@@ -1,10 +1,10 @@
-# 🚀 Guía de Setup para el Equipo — TienditaCampus
+#  Guía de Setup para el Equipo — TienditaCampus
 
 > Sigue estos pasos para tener el proyecto funcionando en tu máquina desde cero.
 
 ---
 
-## 📋 Requisitos Previos
+##  Requisitos Previos
 
 Antes de empezar, instala lo siguiente:
 
@@ -15,7 +15,7 @@ Antes de empezar, instala lo siguiente:
 | **Node.js** | 20+ (solo si trabajas sin Docker) | https://nodejs.org |
 | **VS Code** (recomendado) | Latest | https://code.visualstudio.com |
 
-> ⚠️ **Docker Desktop debe estar CORRIENDO** antes de ejecutar cualquier comando.
+> ️ **Docker Desktop debe estar CORRIENDO** antes de ejecutar cualquier comando.
 
 ---
 
@@ -253,9 +253,9 @@ docker compose up --build
 
 | Servicio | URL | Qué debería mostrar |
 |----------|-----|---------------------|
-| 🌐 **Frontend** | http://localhost:8080 | Página de login |
-| ⚙️ **API Health** | http://localhost:8080/api/health | `{"status": "ok"}` |
-| 🔐 **API Login** | POST http://localhost:8080/api/auth/login | Token JWT |
+|  **Frontend** | http://localhost:8080 | Página de login |
+| ️ **API Health** | http://localhost:8080/api/health | `{"status": "ok"}` |
+|  **API Login** | POST http://localhost:8080/api/auth/login | Token JWT |
 
 ---
 
@@ -323,7 +323,7 @@ tienditacampus/
 
 ---
 
-## 🛠️ Comandos Útiles
+## ️ Comandos Útiles
 
 | Comando | Qué hace |
 |---------|----------|
@@ -337,7 +337,7 @@ tienditacampus/
 
 ---
 
-## 🗄️ Bases de Datos
+## ️ Bases de Datos
 
 El proyecto usa **2 bases de datos**:
 
@@ -348,7 +348,7 @@ El proyecto usa **2 bases de datos**:
 
 ---
 
-## 🔑 Endpoints de la API
+##  Endpoints de la API
 
 | Método | Endpoint | Auth | Descripción |
 |--------|----------|------|-------------|
@@ -374,7 +374,7 @@ El proyecto usa **2 bases de datos**:
 
 ---
 
-## ❓ Problemas Comunes
+##  Problemas Comunes
 
 ### "El puerto 8080 ya está en uso"
 Cambia `NGINX_HTTP_PORT=8080` a otro puerto en tu `.env` (ej: `NGINX_HTTP_PORT=9090`).
@@ -390,7 +390,7 @@ La primera vez tarda ~5-8 minutos. Las siguientes veces es más rápido gracias 
 
 ---
 
-## 🔄 Cómo Actualizar
+##  Cómo Actualizar
 
 Cuando alguien del equipo suba cambios:
 
@@ -406,4 +406,4 @@ docker compose up --build -d
 
 ---
 
-> 📝 **¿Dudas?** Revisa el archivo `docs/CONTEXTO_PROYECTO.md` en cualquiera de los repos para más detalles.
+>  **¿Dudas?** Revisa el archivo `docs/CONTEXTO_PROYECTO.md` en cualquiera de los repos para más detalles.

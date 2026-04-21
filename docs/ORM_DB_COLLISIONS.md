@@ -56,8 +56,8 @@ role: 'admin' | 'seller' | 'buyer';
 ### C. Para el campo delegado por Triggers (`updated_at`):
 Dado que PostgreSQL ya actualizará esto gracias a la migración de la DB, debes decirle a TypeORM: *"Ey, no trates de settear esto tú en los UPDATE, solo léelo después de guardar"*.
 ```typescript
-@UpdateDateColumn({ 
-    type: 'timestamptz', 
+@UpdateDateColumn({
+    type: 'timestamptz',
     name: 'updated_at',
     default: () => 'CURRENT_TIMESTAMP(6)',
     onUpdate: 'CURRENT_TIMESTAMP(6)'
@@ -65,8 +65,8 @@ Dado que PostgreSQL ya actualizará esto gracias a la migración de la DB, debes
 updatedAt: Date;
 
 // SOLUCIÓN ESTRICTA SOA:
-@Column({ 
-    type: 'timestamptz', 
+@Column({
+    type: 'timestamptz',
     name: 'updated_at',
     default: () => 'NOW()',
     insert: false,
